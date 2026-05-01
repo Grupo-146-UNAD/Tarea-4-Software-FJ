@@ -1,4 +1,26 @@
 # =========================================================================================================
+# Sistema Integral de Gestión de Clientes, Servicios y Reservas - Software FJ
+# =========================================================================================================
+# Versión con Interfaz Gráfica Tkinter - Menú Principal y Gestión Completa
+# =========================================================================================================
+# Integrantes:  
+# Yuris Cerguey Reyes Mandón
+# Danna Valeria Uribe Santiago
+# Jose Daniel Machado Castellanos
+# Diego Alejandro Rocha Manzano
+# =========================================================================================================
+# Curso: Programación
+# =========================================================================================================
+# Grupo: 146
+# =========================================================================================================
+# Tutor: Jhon Harold Patiño Pantoja
+# =========================================================================================================
+# Fecha: Mayo 2026
+# =========================================================================================================
+# Universidad Nacional Abierta y a Distancia (UNAD)
+# =========================================================================================================
+
+# =========================================================================================================
 # MÓDULO SISTEMA  
 # =========================================================================================================
 # Descripción: Orquestador del sistema de gestión de servicios y reservas
@@ -409,46 +431,36 @@ class SistemaGestionFJ:
             raise e # Re-lanza la excepción para que la UI la muestre
         
     # =====================================================================================================    
-    # El método eliminar_cliente verifica que no haya reservas activas antes de eliminar
+    # El método eliminar_cliente, elimina un cliente SOLO si NO tiene reservas asociadas
     # =====================================================================================================
     def eliminar_cliente(self, id_cliente: int) -> bool:
         
-        # MÉTODO: eliminar_cliente
-        # PROPÓSITO: Elimina un cliente si no tiene reservas activas.
-        # PARÁMETROS: id_cliente
-        # RETORNA: True si se eliminó correctamente, False si no se encontró el cliente o tiene reservas activas
-        
         try:
-            
-            # Busca cliente por ID usando comprensión de listas con next()
             cliente = next((c for c in self.clientes if c.id == id_cliente), None)
-            
-            # Si no existe
             if not cliente:
-                raise ClienteInvalidoError(f"Cliente con ID {id_cliente} no encontrado") # Valida existencia antes de eliminar
+                raise ClienteInvalidoError(f"Cliente con ID {id_cliente} no encontrado")
             
-            # Verificar que no haya reservas activas (PENDIENTE o CONFIRMADA) para este cliente
-            reservas_activas = [r for r in self.reservas 
-                        if r._cliente.id == id_cliente and r.estado in ["PENDIENTE", "CONFIRMADA"]]
+            # ========== VERIFICAR SI EL CLIENTE TIENE RESERVAS ASOCIADAS ==========
+            # Esto incluye reservas PENDIENTES, CONFIRMADAS, COMPLETADAS o VENCIDAS
+            # Cualquier reserva asociada impide eliminar el cliente
+            reservas_asociadas = [r for r in self.reservas if r._cliente.id == id_cliente]
             
-            # Si hay reservas activas, no se puede eliminar el cliente
-            if reservas_activas:
-                raise ClienteInvalidoError(f"El cliente tiene {len(reservas_activas)} reservas activas. No se puede eliminar.")
+            if reservas_asociadas:
+                cantidad = len(reservas_asociadas)
+                raise ClienteInvalidoError(
+                    f"❌ No se puede eliminar el cliente '{cliente.nombre}'.\n"
+                    f"📅 Tiene {cantidad} reserva(s) asociada(s) en el sistema.\n"
+                    f"💡 Los clientes con historial de reservas no se pueden eliminar."
+                )
             
-            # Si no hay reservas activas, elimina el cliente
             self.clientes.remove(cliente)
-            
-            # Registra evento de eliminación en el log
             self.logger.registrar_evento(f"Cliente {id_cliente} eliminado")
-            
-            # Guarda el estado del sistema después de la modificación
             self.guardar_datos()
+            return True
             
-            return True # Cliente eliminado exitosamente
-        
-        except Exception as e: # Captura cualquier excepción que ocurra durante el proceso
-            self.logger.registrar_error(e, "eliminar_cliente") # Registra el error en el log con contexto del método
-            raise e # Re-lanza la excepción para que la UI la muestre
+        except Exception as e:
+            self.logger.registrar_error(e, "eliminar_cliente")
+            raise e
         
     # =====================================================================================================
     # El método cambiar_estado_cliente permite activar o desactivar un cliente
@@ -622,51 +634,38 @@ class SistemaGestionFJ:
             raise e # Re-lanza la excepción para que la UI la muestre
     
     # =====================================================================================================
-    # El método eliminar_servicio verifica que no haya reservas activas antes de eliminar
+    # El método eliminar_servicio, elimina un servicio SOLO si NO tiene reservas asociadas
+    # Una vez que un servicio tiene historial de reservas, NO se puede eliminar
     # =====================================================================================================
     def eliminar_servicio(self, id_servicio: int) -> bool:
         
-        # MÉTODO: eliminar_servicio
-        # PROPÓSITO: Elimina un servicio si no tiene reservas activas.
-        # PARÁMETROS: id_servicio
-        # RETORNA: True si se eliminó correctamente, False si no se encontró el servicio o tiene reservas activas
-        
         try:
-            
-            # Busca servicio por ID usando comprensión de listas con next()
             servicio = next((s for s in self.servicios if s.id == id_servicio), None)
-            
-            # Si no existe
             if not servicio:
-                
-                # Valida existencia antes de eliminar
                 raise ServicioNoDisponibleError(f"Servicio con ID {id_servicio} no encontrado")
             
-            # Verificar que no haya reservas activas (PENDIENTE o CONFIRMADA) para este servicio
-            reservas_activas = [r for r in self.reservas 
-                        if r._servicio.id == id_servicio and r.estado in ["PENDIENTE", "CONFIRMADA"]]
+            # ========== VERIFICAR SI EL SERVICIO TIENE RESERVAS ASOCIADAS ==========
+            # Esto incluye reservas PENDIENTES, CONFIRMADAS, COMPLETADAS o VENCIDAS
+            # Cualquier reserva asociada impide eliminar el servicio
+            reservas_asociadas = [r for r in self.reservas if r._servicio.id == id_servicio]
             
-            # Si hay reservas activas, no se puede eliminar el servicio
-            if reservas_activas:
-                
-                # Valida reservas activas antes de eliminar el servicio
-                raise ServicioNoDisponibleError(f"El servicio tiene {len(reservas_activas)} reservas activas. No se puede eliminar.")
+            if reservas_asociadas:
+                cantidad = len(reservas_asociadas)
+                raise ServicioNoDisponibleError(
+                    f"❌ No se puede eliminar el servicio '{servicio.nombre}'.\n"
+                    f"📅 Tiene {cantidad} reserva(s) asociada(s) en el sistema.\n"
+                    f"💡 Los servicios con historial de reservas no se pueden eliminar."
+                )
             
-            # Si no hay reservas activas, elimina el servicio
+            # Si no tiene reservas asociadas, proceder a eliminar
             self.servicios.remove(servicio)
-            
-            # Registra evento de eliminación en el log con la descripción del servicio
             self.logger.registrar_evento(f"Servicio {id_servicio} eliminado")
-            
-            # Guarda el estado del sistema después de la modificación
             self.guardar_datos()
-            
-            # Retorna True para indicar que el servicio fue eliminado exitosamente
             return True
-        
-        except Exception as e: # Captura cualquier excepción que ocurra durante el proceso
-            self.logger.registrar_error(e, "eliminar_servicio") # Registra el error en el log con contexto del método
-            raise e # Re-lanza la excepción para que la UI la muestre
+            
+        except Exception as e:
+            self.logger.registrar_error(e, "eliminar_servicio")
+            raise e
     
     # =====================================================================================================
     # El método cambiar_disponibilidad_servicio permite activar o desactivar un servicio
