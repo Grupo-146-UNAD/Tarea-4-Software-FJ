@@ -20,6 +20,10 @@
 # Universidad Nacional Abierta y a Distancia (UNAD)
 # =========================================================================================================
 
+# =========================================================================================================
+# MÓDULO MAIN
+# =========================================================================================================
+
 # ==================== IMPORTACIONES ======================================================================
 # Cada importación trae funcionalidades específicas de Python
 import tkinter as tk # Tkinter para interfaz gráfica (alias 'tk' para simplificar)
@@ -119,8 +123,8 @@ class AplicacionFJ:
         self._crear_widgets()
         self._actualizar_tablas()
         
-        # CENTRAR LA VENTANA PRINCIPAL (1400x800) - tamaño fijo para la ventana principal
-        centrar_ventana(self.root, 1400, 800)
+        # CENTRAR LA VENTANA PRINCIPAL - tamaño fijo para la ventana principal
+        centrar_ventana(self.root, 1600, 850)
         
         # Configurar manejador de cierre de ventana
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
@@ -179,7 +183,7 @@ class AplicacionFJ:
                     padding=8)
     
         self.style.map('Orange.TButton',
-                    background=[('active', '#ef6c00')],
+                    background=[('active', '#e65100')],
                     foreground=[('active', 'white')])
         
         # === ENCABEZADOS DE TABLA (HOVER VISIBLE) ===
@@ -525,53 +529,53 @@ class AplicacionFJ:
         tab = ttk.Frame(self.notebook)
         self.notebook.add(tab, text="📅 Reservas")
         
-        # Panel de botones
+        # ========== PANEL DE BOTONES ==========
         btn_frame = ttk.Frame(tab)
         btn_frame.pack(fill=tk.X, pady=10, padx=10)
         
-        btn_nueva = ttk.Button(btn_frame, 
-                    text="📅 Nueva Reserva", 
-                    command=self._abrir_dialogo_reserva, 
-                    style='Primary.TButton')
+        # Botón Nueva Reserva
+        btn_nueva = ttk.Button(btn_frame, text="📅 Nueva Reserva", 
+                command=self._abrir_dialogo_reserva,
+                style='Primary.TButton')
         btn_nueva.pack(side=tk.LEFT, padx=5)
         
-        btn_confirmar = ttk.Button(btn_frame, 
-                    text="✅ Confirmar", 
-                    command=self._confirmar_reserva_seleccionada, 
-                    style='Success.TButton')
+        # Botón Confirmar
+        btn_confirmar = ttk.Button(btn_frame, text="✅ Confirmar", 
+                command=self._confirmar_reserva_seleccionada,
+                style='Success.TButton')
         btn_confirmar.pack(side=tk.LEFT, padx=5)
         
-        btn_cancelar = ttk.Button(btn_frame, 
-                    text="❌ Cancelar", 
-                    command=self._cancelar_reserva_seleccionada, 
-                    style='Danger.TButton')
+        # Botón Cancelar
+        btn_cancelar = ttk.Button(btn_frame, text="❌ Cancelar", 
+                command=self._cancelar_reserva_seleccionada,
+                style='Danger.TButton')
         btn_cancelar.pack(side=tk.LEFT, padx=5)
         
-        btn_completar = ttk.Button(btn_frame, 
-                    text="🏁 Completar", 
-                    command=self._completar_reserva_seleccionada, 
-                    style='Primary.TButton')
+        # Botón Completar
+        btn_completar = ttk.Button(btn_frame, text="🏁 Completar", 
+                command=self._completar_reserva_seleccionada,
+                style='Primary.TButton')
         btn_completar.pack(side=tk.LEFT, padx=5)
         
-        btn_descuento = ttk.Button(btn_frame, 
-                    text="💰 Aplicar Descuento", 
-                    command=self._aplicar_descuento_reserva, 
-                    style='Success.TButton')
+        # Botón Aplicar Descuento
+        btn_descuento = ttk.Button(btn_frame, text="💰 Aplicar Descuento", 
+                command=self._aplicar_descuento_reserva,
+                style='Success.TButton')
         btn_descuento.pack(side=tk.LEFT, padx=5)
         
-        btn_sobrecarga = ttk.Button(btn_frame,
-                    text="📊 Probar Métodos Sobrecargados", 
-                    command=self._probar_sobrecarga_reserva_seleccionada, 
-                    style='Orange.TButton') 
-        btn_sobrecarga.pack(side=tk.LEFT, padx=5)
+        # Botón para probar métodos sobrecargados
+        btn_sobrecargados = ttk.Button(btn_frame, text="🧪 Probar Métodos Sobrecargados", 
+                command=self._probar_sobrecarga_reserva_seleccionada,
+                style='Orange.TButton')  # ← Cambiado a Orange.TButton
+        btn_sobrecargados.pack(side=tk.LEFT, padx=5)
         
-        btn_refresh = ttk.Button(btn_frame, 
-                    text="🔄 Refrescar",
-                    command=self._actualizar_tablas, 
-                    style='Primary.TButton')
+        # Botón Refrescar (IMPORTANTE: para forzar actualización)
+        btn_refresh = ttk.Button(btn_frame, text="🔄 Refrescar Tabla", 
+                command=self._actualizar_tablas,
+                style='Primary.TButton')
         btn_refresh.pack(side=tk.RIGHT, padx=5)
         
-        # Campo de búsqueda
+        # ========== CAMPO DE BÚSQUEDA ==========
         busqueda_frame = ttk.Frame(tab)
         busqueda_frame.pack(fill=tk.X, pady=5, padx=10)
         
@@ -580,33 +584,50 @@ class AplicacionFJ:
         self.busqueda_reserva.pack(side=tk.LEFT, padx=5)
         self.busqueda_reserva.bind('<KeyRelease>', self._filtrar_reservas)
         
-        # Tabla de reservas
+        # ========== TABLA DE RESERVAS (CONFIGURACIÓN CORREGIDA) ==========
         table_frame = ttk.LabelFrame(tab, text="Lista de Reservas", padding="10")
         table_frame.pack(fill=tk.BOTH, expand=True, pady=10, padx=10)
         
-        columns = ("ID", "Cliente", "Servicio", "Duración (h)", "Estado", "Costo Total", "Fecha")
-        self.reservas_tree = ttk.Treeview(table_frame,
-                columns=columns, show='headings', height=15, style='Custom.Treeview')
+        # Títulos de las Columnas de la Tabla
+        columnas = [
+            "ID", "Cliente", "Servicio", "Duración (h)", "Parámetros Extra",
+            "Precio Base", "% Descuento", "Valor Descuento", "Total", "Estado", "Fecha"
+        ]
         
-        for col in columns:
+        # Crea el Treeview
+        self.reservas_tree = ttk.Treeview(
+            table_frame, 
+            columns=columnas,
+            show='headings',  # Muestra solo los encabezados (no la primera columna vacía)
+            height=15,
+            style='Custom.Treeview'
+        )
+        
+        # CONFIGURAR ENCABEZADOS Y ANCHOS (UNO POR UNO)
+        anchos = [60, 180, 180, 90, 280, 120, 100, 120, 120, 110, 150]
+        
+        for i, col in enumerate(columnas):
             self.reservas_tree.heading(col, text=col)
-            width = 150 if col in ["Cliente", "Servicio"] else 120
-            self.reservas_tree.column(col, width=width)
+            self.reservas_tree.column(col, width=anchos[i], minwidth=anchos[i])
         
-        scrollbar_y = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, 
-                command=self.reservas_tree.yview)
-        scrollbar_x = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL,
-                command=self.reservas_tree.xview)
-        self.reservas_tree.configure(yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set)
+        # Scrollbars
+        scroll_y = ttk.Scrollbar(table_frame, orient=tk.VERTICAL, command=self.reservas_tree.yview)
+        scroll_x = ttk.Scrollbar(table_frame, orient=tk.HORIZONTAL, command=self.reservas_tree.xview)
+        self.reservas_tree.configure(yscrollcommand=scroll_y.set, xscrollcommand=scroll_x.set)
         
+        # Posicionar elementos
         self.reservas_tree.grid(row=0, column=0, sticky=(tk.W, tk.E, tk.N, tk.S))
-        scrollbar_y.grid(row=0, column=1, sticky=(tk.N, tk.S))
-        scrollbar_x.grid(row=1, column=0, sticky=(tk.W, tk.E))
+        scroll_y.grid(row=0, column=1, sticky=(tk.N, tk.S))
+        scroll_x.grid(row=1, column=0, sticky=(tk.W, tk.E))
         
+        # Configurar expansión
         table_frame.columnconfigure(0, weight=1)
         table_frame.rowconfigure(0, weight=1)
+        
+        # ========== DOBLE CLIC PARA VER DETALLES ==========
+        self.reservas_tree.bind('<Double-1>', self._ver_detalles_reserva_doble_clic)
     
-    # ==================== MÉTODOS DE FILTRADO ====================
+    # ==================== MÉTODOS DE FILTRADO ============================================================
     # MÉTODO: _filtrar_clientes, filtra la tabla de clientes
     # mientras el usuario escribe en el campo de búsqueda.
     # Se ejecuta en cada tecla presionada (evento <KeyRelease>)
@@ -680,28 +701,25 @@ class AplicacionFJ:
             if texto in info["cliente"].lower() or texto in info["servicio"].lower():
                 self.reservas_tree.insert("", tk.END, values=(
                     info["id"], info["cliente"], info["servicio"],
-                    info["duracion"], info["estado"], f"${info['costo']:,.0f}", info["fecha"]
+                    info["duracion"], info["estado"], f"${info['costo_total']:,.0f}", info["fecha"]
                 ))
     
-    # ==================== MÉTODOS DE ACTUALIZACIÓN ====================
+    # ==================== MÉTODOS DE ACTUALIZACIÓN =======================================================
     
     # =====================================================================================================
     # MÉTODO: _actualizar_tablas, actualiza todas las tablas con los datos más recientes del sistema
     # =====================================================================================================
     def _actualizar_tablas(self):
         
-        # Limpiar campos de búsqueda (borrar texto)
-        # delete(0, tk.END): elimina desde la posición 0 hasta el final
+        # Limpiar filtros
         self.busqueda_cliente.delete(0, tk.END)
         self.busqueda_servicio.delete(0, tk.END)
         self.busqueda_reserva.delete(0, tk.END)
         
-        # --- Actualizar tabla de clientes ---
-        # Eliminar todos los elementos existentes
+        # ========== ACTUALIZAR CLIENTES ==========
         for item in self.clientes_tree.get_children():
             self.clientes_tree.delete(item)
         
-        # Recorrer todos los clientes y agregarlos a la tabla
         for cliente in self.sistema.obtener_clientes():
             estado = "✓ Activo" if cliente.activo else "✗ Inactivo"
             self.clientes_tree.insert("", tk.END, values=(
@@ -709,14 +727,13 @@ class AplicacionFJ:
                 cliente.telefono, cliente.cedula, estado
             ))
         
-        # --- Actualizar tabla de servicios ---
+        # ========== ACTUALIZAR SERVICIOS ==========
         for item in self.servicios_tree.get_children():
             self.servicios_tree.delete(item)
         
         for servicio in self.sistema.obtener_servicios():
             disponible = "✓ Sí" if servicio.disponible else "✗ No"
             detalle = ""
-            # Determinar qué tipo de servicio es para mostrar el detalle apropiado
             if isinstance(servicio, ReservaSalas):
                 detalle = f"Capacidad: {servicio.capacidad}"
             elif isinstance(servicio, AlquilerEquipos):
@@ -729,24 +746,57 @@ class AplicacionFJ:
                 f"${servicio.precio_base:,.0f}", disponible, detalle
             ))
         
-        # --- Actualizar tabla de reservas ---
+        # ========== ACTUALIZAR RESERVAS ==========
         for item in self.reservas_tree.get_children():
             self.reservas_tree.delete(item)
         
         for reserva in self.sistema.obtener_reservas():
             info = reserva.obtener_info()
+            
+            # Formatear parámetros extra
+            params_display = ""
+            if info.get("parametros_extra") and len(info["parametros_extra"]) > 0:
+                params_list = []
+                for k, v in info["parametros_extra"].items():
+                    if isinstance(v, bool):
+                        v_str = "Sí" if v else "No"
+                    else:
+                        v_str = str(v)
+                    params_list.append(f"{k}={v_str}")
+                params_display = ", ".join(params_list)
+            else:
+                params_display = "─"
+            
+            # Formatear valores monetarios
+            precio_base_str = f"${info['precio_base']:,.0f}" if info['precio_base'] > 0 else "$0"
+            valor_descuento_str = f"${info['valor_descuento']:,.0f}" if info['valor_descuento'] > 0 else "$0"
+            total_str = f"${info['costo_total']:,.0f}"
+            porcentaje_str = f"{info['porcentaje_descuento']:.0f}%" if info['porcentaje_descuento'] > 0 else "─"
+            
+            # Estado con emoji
+            estado_emoji = {
+                "PENDIENTE": "⏳ Pendiente",
+                "CONFIRMADA": "✅ Confirmada",
+                "CANCELADA": "❌ Cancelada",
+                "COMPLETADA": "🏁 Completada"
+            }.get(info["estado"], info["estado"])
+            
+            # Insertar en la tabla
             self.reservas_tree.insert("", tk.END, values=(
                 info["id"], info["cliente"], info["servicio"],
-                info["duracion"], info["estado"], f"${info['costo']:,.0f}", info["fecha"]
+                f"{info['duracion']:.1f}", params_display,
+                precio_base_str, porcentaje_str, valor_descuento_str,
+                total_str, estado_emoji, info["fecha"]
             ))
         
-        # --- Actualizar estadísticas en el panel superior ---
-        # config(): actualiza la configuración del widget (en este caso, el texto)
+        # Forzar actualización visual
+        self.reservas_tree.update_idletasks()
+        self.reservas_tree.see("")
+        
+        # ========== ACTUALIZAR ESTADÍSTICAS ==========
         self.stats_clientes.config(text=f"Clientes: {len(self.sistema.obtener_clientes())}")
         self.stats_servicios.config(text=f"Servicios: {len(self.sistema.obtener_servicios())}")
         self.stats_reservas.config(text=f"Reservas: {len(self.sistema.obtener_reservas())}")
-        
-        # Actualizar barra de estado
         self.status_bar.config(text="✅ Datos actualizados correctamente")
     
     # ==================== MÉTODOS DE SELECCIÓN ====================
@@ -1172,12 +1222,13 @@ class AplicacionFJ:
         except Exception as e:
             messagebox.showerror("Error", str(e))
     
-    
-    # ==================== MÉTODOS DE RESERVAS (UI) ====================
+    # ==================== MÉTODOS DE RESERVAS (UI) =======================================================
     
     # =====================================================================================================
-    # MÉTODO: _abrir_dialogo_reserva, abre diálogo para crear nueva reserva - VENTANA AJUSTABLE
-    # (activo/inactivo)
+    # MÉTODO: _abrir_dialogo_reserva, abre un diálogo modal para que el usuario cree una nueva reserva
+    #   - Campos dinámicos según el tipo de servicio (sala, equipo, asesoría)
+    #   - Captura parámetros reales ingresados por el usuario
+    #   - Muestra ejemplos específicos para cada tipo de servicio
     # =====================================================================================================
     def _abrir_dialogo_reserva(self):
         
@@ -1186,107 +1237,240 @@ class AplicacionFJ:
         dialog.transient(self.root)
         dialog.grab_set()
         
+        # ========== FRAME PRINCIPAL ==========
         frame = ttk.Frame(dialog, padding="20")
         frame.pack(fill=tk.BOTH, expand=True)
         
-        # Cliente (Combobox)
-        ttk.Label(frame, text="Cliente:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=5)
-        combo_cliente = ttk.Combobox(frame, width=50)
-        # Lista por comprensión: [expresión for elemento in lista if condición]
+        # ========== SELECCIÓN DE CLIENTE ==========
+        ttk.Label(frame, text="Cliente:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=5)
+        combo_cliente = ttk.Combobox(frame, width=40)
         clientes = [f"{c.id} - {c.nombre}" for c in self.sistema.obtener_clientes() if c.activo]
         combo_cliente['values'] = clientes
-        combo_cliente.grid(row=0, column=1, pady=5, padx=10)
+        combo_cliente.grid(row=0, column=1, pady=5, padx=10, sticky=tk.W)
         
-        # Servicio (Combobox)
-        ttk.Label(frame, text="Servicio:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=5)
-        combo_servicio = ttk.Combobox(frame, width=50)
+        # ========== SELECCIÓN DE SERVICIO ==========
+        ttk.Label(frame, text="Servicio:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=5)
+        combo_servicio = ttk.Combobox(frame, width=40)
         servicios = [f"{s.id} - {s.nombre} ({s.tipo.upper()})" for s in self.sistema.obtener_servicios() if s.disponible]
         combo_servicio['values'] = servicios
-        combo_servicio.grid(row=1, column=1, pady=5, padx=10)
+        combo_servicio.grid(row=1, column=1, pady=5, padx=10, sticky=tk.W)
         
-        # Duración
-        ttk.Label(frame, text="Duración (horas):", 
-                font=('Segoe UI', 10, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=5)
-        entry_duracion = ttk.Entry(frame, width=45, font=('Segoe UI', 10))
-        entry_duracion.grid(row=2, column=1, pady=5, padx=10)
+        # ========== PRECIO BASE DEL SERVICIO ==========
+        ttk.Label(frame, text="Precio Base del Servicio:", font=('Segoe UI', 10, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=5)
+        precio_base_label = ttk.Label(frame, text="$0 / hora", font=('Segoe UI', 10), foreground="green")
+        precio_base_label.grid(row=2, column=1, pady=5, padx=10, sticky=tk.W)
         
-        # Fecha (opcional) - con valor por defecto: fecha y hora actual
-        ttk.Label(frame, text="Fecha y Hora (opcional, formato YYYY-MM-DD HH:MM):", 
-                font=('Segoe UI', 10, 'bold')).grid(row=3, column=0, sticky=tk.W, pady=5)
-        entry_fecha = ttk.Entry(frame, width=45, font=('Segoe UI', 10))
-        entry_fecha.grid(row=3, column=1, pady=5, padx=10)
+        # ========== DURACIÓN ==========
+        ttk.Label(frame, text="Duración (horas):", font=('Segoe UI', 10, 'bold')).grid(row=3, column=0, sticky=tk.W, pady=5)
+        entry_duracion = ttk.Entry(frame, width=40, font=('Segoe UI', 10))
+        entry_duracion.grid(row=3, column=1, pady=5, padx=10, sticky=tk.W)
+        entry_duracion.insert(0, "3")
+        
+        # ========== SUBTOTAL EN TIEMPO REAL ==========
+        ttk.Label(frame, text="Subtotal (sin descuento):", font=('Segoe UI', 10, 'bold')).grid(row=4, column=0, sticky=tk.W, pady=5)
+        subtotal_label = ttk.Label(frame, text="$0", font=('Segoe UI', 10), foreground="blue")
+        subtotal_label.grid(row=4, column=1, pady=5, padx=10, sticky=tk.W)
+        
+        # ========== CAPACIDAD MÁXIMA DE LA SALA ==========
+        capacidad_label = ttk.Label(frame, text="", font=('Segoe UI', 9), foreground="#c62828")  # Rojo oscuro legible
+        capacidad_label.grid(row=5, column=0, columnspan=2, pady=2, sticky=tk.W)
+        
+        # ========== FECHA (OPCIONAL) ==========
+        ttk.Label(frame, text="Fecha y Hora (opcional):", font=('Segoe UI', 10, 'bold')).grid(row=6, column=0, sticky=tk.W, pady=5)
+        entry_fecha = ttk.Entry(frame, width=40, font=('Segoe UI', 10))
+        entry_fecha.grid(row=6, column=1, pady=5, padx=10, sticky=tk.W)
         entry_fecha.insert(0, datetime.datetime.now().strftime("%Y-%m-%d %H:%M"))
         
-        # Parámetros extra (con ejemplos para cada tipo)
-        ttk.Label(frame, text="Parámetros Extra:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=4, column=0, sticky=tk.W, pady=5)
+        # ========== FRAME PARA PARÁMETROS DINÁMICOS ==========
+        params_frame = ttk.LabelFrame(frame, text="Parámetros del Servicio", padding="10")
+        params_frame.grid(row=7, column=0, columnspan=2, pady=10, padx=5, sticky=tk.W+tk.E)
         
-        params_frame = ttk.Frame(frame)
-        params_frame.grid(row=4, column=1, pady=5, padx=10, sticky=tk.W)
+        # Variables para los campos dinámicos
+        self.campo_personas = None
+        self.campo_equipo_adicional = None
+        self.campo_cantidad = None
+        self.campo_seguro = None
+        self.campo_tema = None
+        self.campo_miembro_premium = None
         
-        ttk.Label(params_frame, text="💡 Ejemplos:", foreground="gray").pack(anchor=tk.W)
-        ttk.Label(params_frame, text="- Sala: personas=10", foreground="gray", 
-                font=('Segoe UI', 8)).pack(anchor=tk.W)
-        ttk.Label(params_frame, text="- Equipo: cantidad=2, seguro=True", foreground="gray", 
-                font=('Segoe UI', 8)).pack(anchor=tk.W)
-        ttk.Label(params_frame, text="- Asesoría: tema=Python, miembro_premium=True", foreground="gray", 
-                font=('Segoe UI', 8)).pack(anchor=tk.W)
+        # Label de ayuda
+        ayuda_label = ttk.Label(params_frame, text="Seleccione un servicio para ver los parámetros", 
+                                font=('Segoe UI', 9), foreground="blue")
+        ayuda_label.pack(anchor=tk.W, pady=5)
         
-        entry_params = ttk.Entry(frame, width=45, font=('Segoe UI', 10))
-        entry_params.grid(row=5, column=1, pady=5, padx=10)
-        entry_params.insert(0, "personas=5")  # Valor por defecto
+        # Frame para campos dinámicos
+        campos_dinamicos = ttk.Frame(params_frame)
+        campos_dinamicos.pack(fill=tk.X, pady=5)
         
-        # =================================================================================================
-        # FUNCIÓN: guardar, captura los datos del formulario y registra la reserva
-        # =================================================================================================
+        # ========== FUNCIÓN PARA ACTUALIZAR PRECIO BASE Y SUBTOTAL ==========
+        def actualizar_precio_y_subtotal(event=None):
+            try:
+                seleccion = combo_servicio.get()
+                duracion_texto = entry_duracion.get()
+                if not seleccion or not duracion_texto:
+                    return
+                id_servicio = int(seleccion.split(" - ")[0])
+                servicio = next((s for s in self.sistema.obtener_servicios() if s.id == id_servicio), None)
+                if servicio:
+                    precio_base_label.config(text=f"${servicio.precio_base:,.0f} / hora")
+                    duracion = float(duracion_texto)
+                    subtotal = servicio.precio_base * duracion
+                    subtotal_label.config(text=f"${subtotal:,.0f}")
+            except:
+                precio_base_label.config(text="$0 / hora")
+                subtotal_label.config(text="$0")
+        
+        # ========== FUNCIÓN PARA ACTUALIZAR SUBTOTAL CON PARÁMETROS ==========
+        def actualizar_subtotal_con_parametros():
+            try:
+                seleccion = combo_servicio.get()
+                duracion_texto = entry_duracion.get()
+                if not seleccion or not duracion_texto:
+                    return
+                id_servicio = int(seleccion.split(" - ")[0])
+                servicio = next((s for s in self.sistema.obtener_servicios() if s.id == id_servicio), None)
+                if not servicio:
+                    return
+                duracion = float(duracion_texto)
+                texto_servicio = seleccion.lower()
+                params = {}
+                if "sala" in texto_servicio:
+                    if self.campo_personas and self.campo_personas.get():
+                        try:
+                            params["personas"] = int(self.campo_personas.get())
+                        except:
+                            params["personas"] = 10
+                    if self.campo_equipo_adicional is not None:
+                        params["equipo_adicional"] = self.campo_equipo_adicional.get()
+                elif "equipo" in texto_servicio:
+                    if self.campo_cantidad and self.campo_cantidad.get():
+                        try:
+                            params["cantidad"] = int(self.campo_cantidad.get())
+                        except:
+                            params["cantidad"] = 1
+                    if self.campo_seguro is not None:
+                        params["seguro"] = self.campo_seguro.get()
+                elif "asesoria" in texto_servicio:
+                    if self.campo_tema and self.campo_tema.get():
+                        params["tema"] = self.campo_tema.get()
+                    if self.campo_miembro_premium is not None:
+                        params["miembro_premium"] = self.campo_miembro_premium.get()
+                if params:
+                    subtotal = servicio.calcular_costo(duracion, **params)
+                else:
+                    subtotal = servicio.precio_base * duracion
+                subtotal_label.config(text=f"${subtotal:,.0f}")
+            except Exception as e:
+                print(f"Error: {e}")
+        
+        # ========== FUNCIÓN PARA ACTUALIZAR CAMPOS SEGÚN SERVICIO ==========
+        def actualizar_campos_por_servicio(event=None):
+            for widget in campos_dinamicos.winfo_children():
+                widget.destroy()
+            seleccion = combo_servicio.get().lower()
+            capacidad_label.config(text="")
+            actualizar_precio_y_subtotal()
+            
+            if "sala" in seleccion:
+                ayuda_label.config(text="📌 Para SALA: ingrese el número de personas")
+                try:
+                    id_servicio = int(combo_servicio.get().split(" - ")[0])
+                    servicio = next((s for s in self.sistema.obtener_servicios() if s.id == id_servicio), None)
+                    if servicio and hasattr(servicio, 'capacidad'):
+                        capacidad_label.config(text=f"⚠️ Capacidad máxima de esta sala: {servicio.capacidad} personas")
+                except:
+                    pass
+                ttk.Label(campos_dinamicos, text="Número de personas:", font=('Segoe UI', 9)).pack(anchor=tk.W)
+                self.campo_personas = ttk.Entry(campos_dinamicos, width=20, font=('Segoe UI', 10))
+                self.campo_personas.pack(anchor=tk.W, pady=2)
+                self.campo_personas.insert(0, "10")
+                self.campo_personas.bind('<KeyRelease>', lambda e: actualizar_subtotal_con_parametros())
+                self.campo_equipo_adicional = tk.BooleanVar(value=False)
+                ttk.Checkbutton(campos_dinamicos, text="¿Equipo adicional? (+20% costo)", 
+                                variable=self.campo_equipo_adicional,
+                                command=actualizar_subtotal_con_parametros).pack(anchor=tk.W, pady=5)
+            elif "equipo" in seleccion:
+                ayuda_label.config(text="📌 Para EQUIPO: ingrese la cantidad de equipos")
+                ttk.Label(campos_dinamicos, text="Cantidad de equipos:", font=('Segoe UI', 9)).pack(anchor=tk.W)
+                self.campo_cantidad = ttk.Entry(campos_dinamicos, width=20, font=('Segoe UI', 10))
+                self.campo_cantidad.pack(anchor=tk.W, pady=2)
+                self.campo_cantidad.insert(0, "1")
+                self.campo_cantidad.bind('<KeyRelease>', lambda e: actualizar_subtotal_con_parametros())
+                self.campo_seguro = tk.BooleanVar(value=False)
+                ttk.Checkbutton(campos_dinamicos, text="¿Seguro? (+$5,000)", 
+                                variable=self.campo_seguro,
+                                command=actualizar_subtotal_con_parametros).pack(anchor=tk.W, pady=5)
+            elif "asesoria" in seleccion:
+                ayuda_label.config(text="📌 Para ASESORÍA: ingrese el tema y si es miembro premium")
+                ttk.Label(campos_dinamicos, text="Tema de asesoría:", font=('Segoe UI', 9)).pack(anchor=tk.W)
+                self.campo_tema = ttk.Entry(campos_dinamicos, width=40, font=('Segoe UI', 10))
+                self.campo_tema.pack(anchor=tk.W, pady=2)
+                self.campo_tema.insert(0, "Python Avanzado")
+                self.campo_miembro_premium = tk.BooleanVar(value=False)
+                ttk.Checkbutton(campos_dinamicos, text="¿Miembro Premium? (15% descuento)", 
+                                variable=self.campo_miembro_premium,
+                                command=actualizar_subtotal_con_parametros).pack(anchor=tk.W, pady=5)
+            else:
+                ayuda_label.config(text="🔧 Seleccione un servicio para ver los parámetros disponibles")
+        
+        # ========== VINCULAR EVENTOS ==========
+        combo_servicio.bind('<<ComboboxSelected>>', actualizar_campos_por_servicio)
+        entry_duracion.bind('<KeyRelease>', actualizar_subtotal_con_parametros)
+        
+        # ========== FUNCIÓN GUARDAR ==========
         def guardar():
             try:
-                # Validaciones básicas
                 if not combo_cliente.get():
                     raise Exception("Seleccione un cliente")
                 if not combo_servicio.get():
                     raise Exception("Seleccione un servicio")
                 
-                # Extraer IDs del texto seleccionado (formato: "ID - Nombre")
-                # split(" - "): divide el string en partes usando " - " como separador
-                id_cliente = int(combo_cliente.get().split(" - ")[0])  # [0] es la primera parte (ID)
+                id_cliente = int(combo_cliente.get().split(" - ")[0])
                 id_servicio = int(combo_servicio.get().split(" - ")[0])
                 duracion = float(entry_duracion.get())
                 
-                # Parsear fecha (convertir string a objeto datetime)
                 fecha = None
                 if entry_fecha.get():
                     try:
-                        # strptime(): convierte string a datetime según el formato especificado
                         fecha = datetime.datetime.strptime(entry_fecha.get(), "%Y-%m-%d %H:%M")
                     except:
                         raise Exception("Formato de fecha inválido. Use YYYY-MM-DD HH:MM")
                 
-                # Parsear parámetros extra (formato: clave=valor, clave2=valor2)
                 params = {}
-                param_text = entry_params.get()
-                if param_text:
-                    # split(','): divide por comas para obtener cada par clave=valor
-                    for item in param_text.split(','):
-                        if '=' in item:
-                            key, value = item.split('=')
-                            key = key.strip()
-                            value = value.strip()
-                            # Conversión automática de tipos
-                            if value.lower() == 'true':
-                                value = True
-                            elif value.lower() == 'false':
-                                value = False
-                            elif value.isdigit():
-                                value = int(value)
-                            else:
-                                try:
-                                    value = float(value)
-                                except:
-                                    pass
-                            params[key] = value
+                texto_servicio = combo_servicio.get().lower()
+                
+                if "sala" in texto_servicio:
+                    if self.campo_personas and self.campo_personas.get().strip():
+                        try:
+                            params["personas"] = int(self.campo_personas.get())
+                        except ValueError:
+                            params["personas"] = 10
+                    else:
+                        params["personas"] = 10
+                    if self.campo_equipo_adicional is not None:
+                        params["equipo_adicional"] = self.campo_equipo_adicional.get()
+                elif "equipo" in texto_servicio:
+                    if self.campo_cantidad and self.campo_cantidad.get().strip():
+                        try:
+                            params["cantidad"] = int(self.campo_cantidad.get())
+                            if params["cantidad"] <= 0:
+                                params["cantidad"] = 1
+                        except ValueError:
+                            params["cantidad"] = 1
+                    else:
+                        params["cantidad"] = 1
+                    if self.campo_seguro is not None:
+                        params["seguro"] = self.campo_seguro.get()
+                elif "asesoria" in texto_servicio:
+                    if self.campo_tema and self.campo_tema.get().strip():
+                        tema = self.campo_tema.get().strip()
+                        if ',' in tema:
+                            tema = tema.split(',')[0].strip()
+                        params["tema"] = tema
+                    else:
+                        params["tema"] = "Python Avanzado"
+                    if self.campo_miembro_premium is not None:
+                        params["miembro_premium"] = self.campo_miembro_premium.get()
                 
                 self.sistema.crear_reserva(id_cliente, id_servicio, duracion, fecha, **params)
                 self._actualizar_tablas()
@@ -1295,13 +1479,14 @@ class AplicacionFJ:
             except Exception as e:
                 messagebox.showerror("Error", str(e))
         
+        # ========== BOTONES ==========
         btn_frame = ttk.Frame(frame)
-        btn_frame.grid(row=6, column=0, columnspan=2, pady=20)
+        btn_frame.grid(row=8, column=0, columnspan=2, pady=20)
         ttk.Button(btn_frame, text="Crear Reserva", command=guardar, style='Success.TButton').pack(side=tk.LEFT, padx=5)
         ttk.Button(btn_frame, text="Cancelar", command=dialog.destroy, style='Danger.TButton').pack(side=tk.LEFT, padx=5)
         
-        centrar_ventana(dialog) # Se ajusta automáticamente al contenido
-    
+        # ========== CENTRAR VENTANA ==========
+        centrar_ventana(dialog, 550, 580)
     # =====================================================================================================
     # MÉTODO: _confirmar_reserva_seleccionada, confirma la reserva seleccionada (cambia estado a CONFIRMADA)
     # =====================================================================================================
@@ -1355,21 +1540,85 @@ class AplicacionFJ:
     
     # =====================================================================================================
     # MÉTODO: _aplicar_descuento_reserva, aplica descuento porcentual a la reserva seleccionada
+    # muestra información ANTES y DESPUÉS del descuento
     # =====================================================================================================
     def _aplicar_descuento_reserva(self):
-        
+        # Obtener el ID de la reserva seleccionada
         id_reserva = self._obtener_reserva_seleccionada()
+        
+        # Si no hay reserva seleccionada, salir
         if not id_reserva:
             return
         
-        # askfloat(): solicita un número decimal con validación de rango
-        porcentaje = simpledialog.askfloat("Descuento", "Ingrese el porcentaje de descuento (0-100):", minvalue=0, maxvalue=100)
+        # Buscar la reserva completa en el sistema
+        reserva = next((r for r in self.sistema.obtener_reservas() if r.id == id_reserva), None)
+        
+        # Si no se encuentra la reserva, mostrar error
+        if not reserva:
+            messagebox.showerror("Error", "No se encontró la reserva")
+            return
+        
+        # Obtener información actual de la reserva (antes del descuento)
+        info = reserva.obtener_info()
+        
+        # ========== MOSTRAR INFORMACIÓN ACTUAL (ANTES DEL DESCUENTO) ==========
+        # CORRECCIÓN: Las líneas dentro del f-string NO deben tener indentación
+        mensaje_actual = f"""📊 INFORMACIÓN ACTUAL DE LA RESERVA:
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        📅 Reserva ID: {info['id']}
+        👤 Cliente: {info['cliente']}
+        🛠️ Servicio: {info['servicio']}
+        ⏱️ Duración: {info['duracion']} horas
+        📝 Parámetros: {info.get('parametros_extra', {})}
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        💰 Precio Base: ${info['precio_base']:,.0f}
+        💸 Descuento actual: {info['porcentaje_descuento']:.0f}% (${info['valor_descuento']:,.0f})
+        💵 Total actual: ${info['costo_total']:,.0f}
+        ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        """
+        
+        # Solicitar al usuario el nuevo porcentaje de descuento
+        # askfloat() muestra un diálogo para ingresar un número decimal
+        # minvalue=0 y maxvalue=100 limitan el rango permitido
+        porcentaje = simpledialog.askfloat(
+            "Aplicar Descuento",
+            mensaje_actual + "\nIngrese el NUEVO porcentaje de descuento (0-100):\n(0 para eliminar descuento)",
+            minvalue=0,
+            maxvalue=100
+        )
+        
+        # Si el usuario ingresó un porcentaje (no canceló)
         if porcentaje is not None:
             try:
+                # Aplicar el descuento a la reserva
                 self.sistema.aplicar_descuento_reserva(id_reserva, porcentaje)
+                
+                # Actualizar las tablas para reflejar el cambio
                 self._actualizar_tablas()
-                messagebox.showinfo("Éxito", f"Descuento del {porcentaje}% aplicado correctamente")
+                
+                # Obtener la información actualizada de la reserva (después del descuento)
+                reserva_actualizada = next(
+                    (r for r in self.sistema.obtener_reservas() if r.id == id_reserva),
+                    None
+                )
+                
+                if reserva_actualizada:
+                    info_nueva = reserva_actualizada.obtener_info()
+                    
+                    # ========== MOSTRAR RESULTADO (DESPUÉS DEL DESCUENTO) ==========
+                    # CORRECCIÓN: Las líneas dentro del f-string NO deben tener indentación
+                    mensaje_resultado = f"""✅ DESCUENTO APLICADO CORRECTAMENTE
+                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    💰 Precio Base: ${info_nueva['precio_base']:,.0f}
+                    💸 Nuevo descuento: {info_nueva['porcentaje_descuento']:.0f}% (${info_nueva['valor_descuento']:,.0f})
+                    💵 Total a pagar: ${info_nueva['costo_total']:,.0f}
+                    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                    💡 Ahorro total: ${info_nueva['valor_descuento']:,.0f}"""
+                    
+                    messagebox.showinfo("Descuento Aplicado", mensaje_resultado)
+                    
             except Exception as e:
+                # Mostrar error si ocurre algún problema
                 messagebox.showerror("Error", str(e))
     
     # ==================== MÉTODOS DE EXPORTACIÓN ====================
@@ -1647,7 +1896,7 @@ class AplicacionFJ:
                 info['servicio'], 
                 info['duracion'], 
                 estado_display,
-                f"${info['costo']:,.0f}"
+                f"${info['costo_total']:,.0f}"
             ), tags=(estado,))
         
         tree.pack(fill=tk.BOTH, expand=True)
@@ -1738,7 +1987,7 @@ class AplicacionFJ:
                     command=demo_dialog.destroy, 
                     style='Danger.TButton').pack(side=tk.LEFT, padx=5)
             
-            centrar_ventana(demo_dialog, 900, 650)
+            centrar_ventana(demo_dialog, 900, 750)
         
         # =================================================================================================
         # Maneja el doble clic en la tabla
@@ -1763,7 +2012,7 @@ class AplicacionFJ:
         tree.bind("<Double-1>", doble_clic)
         
         # Centrar y mostrar
-        centrar_ventana(dialog, 850, 500)
+        centrar_ventana(dialog, 900, 550)
 
     # =====================================================================================================
     # MÉTODO: _probar_sobrecarga_reserva_seleccionada, prueba los métodos sobrecargados
@@ -1824,7 +2073,7 @@ class AplicacionFJ:
                 style='Danger.TButton').pack(side=tk.LEFT, padx=5)
         
         # Centrar ventana (mismo que usa el menú)
-        centrar_ventana(demo_dialog, 900, 650)
+        centrar_ventana(demo_dialog)
 
     # =====================================================================================================
     # DEMOSTRACIONES DE MANEJO DE EXCEPCIONES (try/except/else)
@@ -1965,6 +2214,171 @@ class AplicacionFJ:
         ttk.Button(btn_frame, text="Cerrar", command=dialog.destroy, style='Primary.TButton').pack()
         
         centrar_ventana(dialog, 700, 450)
+    
+    # =====================================================================================================
+    # MÉTODO: _ver_detalles_reserva_doble_clic, muestra una ventana con TODOS
+    # los detalles completos de la reserva
+    # Esto permite ver los parámetros extra sin que se corten en la tabla
+    # event - evento de tkinter (doble clic)
+    # ===================================================================================================== 
+    def _ver_detalles_reserva_doble_clic(self, event):
+        
+        # Obtener el ID de la reserva seleccionada en la tabla
+        id_reserva = self._obtener_reserva_seleccionada()
+        
+        # Si no hay ninguna reserva seleccionada, mostrar advertencia y salir
+        if not id_reserva:
+            messagebox.showwarning("Advertencia", "Por favor seleccione una reserva")
+            return
+        
+        # Buscar la reserva completa en el sistema por su ID
+        # next() busca el primer elemento que cumple la condición
+        reserva = next((r for r in self.sistema.obtener_reservas() if r.id == id_reserva), None)
+        
+        # Si no se encuentra la reserva, mostrar error
+        if not reserva:
+            messagebox.showerror("Error", "No se encontró la reserva")
+            return
+        
+        # Obtener toda la información de la reserva como diccionario
+        info = reserva.obtener_info()
+        
+        # ========== CREAR VENTANA DE DETALLES ==========
+        # Toplevel() crea una ventana hija de la ventana principal
+        dialog = tk.Toplevel(self.root)
+        dialog.title(f"Detalles de la Reserva #{id_reserva}")
+        dialog.transient(self.root)  # Hace que sea hija de la ventana principal
+        dialog.grab_set()  # Ventana modal (bloquea otras ventanas)
+        
+        # Frame principal con padding de 20 píxeles
+        frame = ttk.Frame(dialog, padding="20")
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # ========== CREAR CANVAS CON SCROLL PARA CONTENIDO LARGO ==========
+        # Esto permite que la ventana tenga scroll si el contenido es muy extenso
+        canvas = tk.Canvas(frame)
+        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        # Configurar el frame desplazable
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        # Crear ventana dentro del canvas
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # Posicionar canvas y scrollbar
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # ========== TÍTULO PRINCIPAL ==========
+        ttk.Label(scrollable_frame, text="📋 DETALLES COMPLETOS DE LA RESERVA", 
+                font=('Segoe UI', 14, 'bold'), foreground=self.colores["primary"]).pack(pady=(0, 15))
+        
+        # ========== SECCIÓN 1: INFORMACIÓN GENERAL ==========
+        general_frame = ttk.LabelFrame(scrollable_frame, text="Información General", padding="10")
+        general_frame.pack(fill=tk.X, pady=5)
+        
+        # Mostrar ID de la reserva
+        ttk.Label(general_frame, text="ID de Reserva:", 
+                font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(general_frame, text=f"{info['id']}", 
+                font=('Segoe UI', 10)).grid(row=0, column=1, sticky=tk.W, pady=2, padx=10)
+        
+        # Mostrar nombre del cliente
+        ttk.Label(general_frame, text="Cliente:", 
+                font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=2)
+        ttk.Label(general_frame, text=f"{info['cliente']}", 
+                font=('Segoe UI', 10)).grid(row=1, column=1, sticky=tk.W, pady=2, padx=10)
+        
+        # Mostrar nombre del servicio
+        ttk.Label(general_frame, text="Servicio:", 
+                font=('Segoe UI', 10, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=2)
+        ttk.Label(general_frame, text=f"{info['servicio']}", 
+                font=('Segoe UI', 10)).grid(row=2, column=1, sticky=tk.W, pady=2, padx=10)
+        
+        # Mostrar duración en horas
+        ttk.Label(general_frame, text="Duración:", 
+                font=('Segoe UI', 10, 'bold')).grid(row=3, column=0, sticky=tk.W, pady=2)
+        ttk.Label(general_frame, text=f"{info['duracion']} horas",
+                font=('Segoe UI', 10)).grid(row=3, column=1, sticky=tk.W, pady=2, padx=10)
+        
+        # Mostrar estado con emoji para mejor visualización
+        ttk.Label(general_frame, text="Estado:", 
+                font=('Segoe UI', 10, 'bold')).grid(row=4, column=0, sticky=tk.W, pady=2)
+        estado_emoji = {
+            "PENDIENTE": "⏳ Pendiente",
+            "CONFIRMADA": "✅ Confirmada",
+            "CANCELADA": "❌ Cancelada",
+            "COMPLETADA": "🏁 Completada"
+        }.get(info['estado'], info['estado'])
+        ttk.Label(general_frame, text=estado_emoji,
+                font=('Segoe UI', 10)).grid(row=4, column=1, sticky=tk.W, pady=2, padx=10)
+        
+        # Mostrar fecha de la reserva
+        ttk.Label(general_frame, text="Fecha:",
+                font=('Segoe UI', 10, 'bold')).grid(row=5, column=0, sticky=tk.W, pady=2)
+        ttk.Label(general_frame, text=f"{info['fecha']}",
+                font=('Segoe UI', 10)).grid(row=5, column=1, sticky=tk.W, pady=2, padx=10)
+        
+        # Mostrar si la reserva está vencida (opcional)
+        if reserva.esta_vencida():
+            ttk.Label(general_frame, text="⚠️ Esta reserva ya VENCIÓ", 
+                font=('Segoe UI', 9, 'bold'), foreground="red").grid(row=6, column=0, columnspan=2, pady=5)
+        
+        # ========== SECCIÓN 2: PARÁMETROS EXTRA ==========
+        params_frame = ttk.LabelFrame(scrollable_frame, text="📝 Parámetros Extra Usados", padding="10")
+        params_frame.pack(fill=tk.X, pady=5)
+        
+        # Verificar si hay parámetros extra
+        if info.get("parametros_extra") and len(info["parametros_extra"]) > 0:
+            # Recorrer cada parámetro y mostrarlo en una fila
+            row = 0
+            for key, value in info["parametros_extra"].items():
+                # Convertir booleanos a texto legible
+                if isinstance(value, bool):
+                    value_str = "Sí" if value else "No"
+                else:
+                    value_str = str(value)
+                
+                # Mostrar clave y valor
+                ttk.Label(params_frame, text=f"{key}:", font=('Segoe UI', 10, 'bold')).grid(row=row, column=0, sticky=tk.W, pady=2)
+                ttk.Label(params_frame, text=value_str, font=('Segoe UI', 10)).grid(row=row, column=1, sticky=tk.W, pady=2, padx=10)
+                row += 1
+        else:
+            # Mensaje si no hay parámetros
+            ttk.Label(params_frame, text="No se especificaron parámetros extra", 
+                    font=('Segoe UI', 10), foreground="gray").pack()
+        
+        # ========== SECCIÓN 3: INFORMACIÓN FINANCIERA COMPLETA ==========
+        financial_frame = ttk.LabelFrame(scrollable_frame, text="💰 Información Financiera", padding="10")
+        financial_frame.pack(fill=tk.X, pady=5)
+        
+        # Mostrar precio base (sin descuento)
+        ttk.Label(financial_frame, text="Precio Base:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=2)
+        ttk.Label(financial_frame, text=f"${info['precio_base']:,.0f}", font=('Segoe UI', 10)).grid(row=0, column=1, sticky=tk.W, pady=2, padx=10)
+        
+        # Mostrar descuento si hay
+        if info['porcentaje_descuento'] > 0:
+            ttk.Label(financial_frame, text="Descuento aplicado:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=2)
+            ttk.Label(financial_frame, text=f"{info['porcentaje_descuento']:.0f}% (${info['valor_descuento']:,.0f})", 
+                    font=('Segoe UI', 10), foreground="green").grid(row=1, column=1, sticky=tk.W, pady=2, padx=10)
+        
+        # Mostrar total a pagar (con descuento aplicado)
+        ttk.Label(financial_frame, text="TOTAL A PAGAR:", font=('Segoe UI', 12, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Label(financial_frame, text=f"${info['costo_total']:,.0f}", 
+                font=('Segoe UI', 14, 'bold'), foreground=self.colores["primary"]).grid(row=2, column=1, sticky=tk.W, pady=5, padx=10)
+        
+        # Botón Cerrar
+        btn_frame = ttk.Frame(scrollable_frame)
+        btn_frame.pack(pady=15)
+        ttk.Button(btn_frame, text="Cerrar", command=dialog.destroy, style='Primary.TButton').pack()
+        
+        # La ventana se ajusta automáticamente al contenido
+        centrar_ventana(dialog, 550, 600)  
         
 # ==================== PUNTO DE ENTRADA PRINCIPAL =========================================================
 # Este bloque se ejecuta SOLO cuando el script se ejecuta directamente
