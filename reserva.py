@@ -1,4 +1,26 @@
 # =========================================================================================================
+# Sistema Integral de Gestión de Clientes, Servicios y Reservas - Software FJ
+# =========================================================================================================
+# Versión con Interfaz Gráfica Tkinter - Menú Principal y Gestión Completa
+# =========================================================================================================
+# Integrantes:  
+# Yuris Cerguey Reyes Mandón
+# Danna Valeria Uribe Santiago
+# Jose Daniel Machado Castellanos
+# Diego Alejandro Rocha Manzano
+# =========================================================================================================
+# Curso: Programación
+# =========================================================================================================
+# Grupo: 146
+# =========================================================================================================
+# Tutor: Jhon Harold Patiño Pantoja
+# =========================================================================================================
+# Fecha: Mayo 2026
+# =========================================================================================================
+# Universidad Nacional Abierta y a Distancia (UNAD)
+# =========================================================================================================
+
+# =========================================================================================================
 # CLASE RESERVA - CON MÉTODOS SOBRECARGADOS
 # =========================================================================================================
 
@@ -7,6 +29,7 @@
 import datetime # Para manejar fechas, horas y realizar operaciones con tiempo
 from excepciones import ReservaInvalidaError, EstadoReservaInvalidoError, ServicioNoDisponibleError # Para manejo de errores específicos del sistema
 from logger import LoggerSistema # Para registro de eventos y errores
+from servicio import ReservaSalas, AlquilerEquipos, AsesoriaEspecializada
 
 # =========================================================================================================
 # Integra cliente, servicio y gestiona el ciclo de vida de la reserva
@@ -34,6 +57,12 @@ class Reserva:
         self._fecha_reserva = fecha_reserva or datetime.datetime.now()  # Fecha actual si no se especifica
         self._estado = "PENDIENTE"               # Estado inicial
         self._costo_total = 0.0                  # Costo inicial (se calculará)
+        
+        
+        # Estos atributos permiten mostrar en la tabla el precio sin descuento
+        self._precio_base_total = 0.0      # Almacena el precio sin descuento
+        self._porcentaje_descuento = 0.0   # Almacena el % de descuento aplicado
+        self._valor_descuento = 0.0        # Almacena el valor del descuento en pesos
         
         # Llama a métodos privados (con _) para validar y calcular
         self._validar_reserva()
@@ -65,20 +94,22 @@ class Reserva:
     
     # =====================================================================================================
     # MÉTODO PRIVADO: _calcular_costo_inicial utiliza el polimorfismo del servicio
-    # para calcular el costo total
+    # para calcular el costo total. Guarda el precio base SIN descuento para poder mostrar ambos valores
     # =====================================================================================================
     def _calcular_costo_inicial(self):
-        
-        # Calcula el costo usando el polimorfismo del servicio
-        
+            
         try:
-            # Llama al método calcular_costo del servicio (polimorfismo)
-            self._costo_total = self._servicio.calcular_costo(
+            # Calcula el precio base (sin descuento) usando los parámetros extra reales
+            # El método calcular_costo() es polimórfico (diferente según el tipo de servicio)
+            self._precio_base_total = self._servicio.calcular_costo(
                 self._duracion_horas, 
-                **self._parametros_extra  # Desempaqueta el diccionario como argumentos nombrados
+                **self._parametros_extra  # Desempaqueta el diccionario de parámetros reales
             )
+            # Inicialmente, el costo total es igual al precio base (sin descuento)
+            self._costo_total = self._precio_base_total
+                
         except Exception as e:
-            # 'raise ... from e' encadena excepciones (preserva la causa original)
+            # Encadenamiento de excepciones: preserva la causa original
             raise ReservaInvalidaError(f"Error calculando costo: {str(e)}") from e
     
     # ==================== MÉTODOS DE ESTADO ====================
@@ -134,18 +165,31 @@ class Reserva:
         LoggerSistema().registrar_evento(f"Reserva {self._id} completada")
     
     # =====================================================================================================
-    # MÉTODO: aplicar_descuento Aplica un descuento porcentual al costo total y registra el evento
+    # MÉTODO: aplicar_descuento Aplica un descuento porcentual al costo total
+    # Guarda el porcentaje aplicado y valor del descuento para mostrar en la tabla
     # =====================================================================================================
     def aplicar_descuento(self, porcentaje: float):
         
-        # Aplica un descuento porcentual al costo total
-        
+        # Validar que el porcentaje esté en el rango permitido (0-100)
         if porcentaje < 0 or porcentaje > 100:
             raise ValueError("Porcentaje de descuento inválido")
-        
-        # Fórmula: costo * (1 - porcentaje/100)
-        self._costo_total = round(self._costo_total * (1 - porcentaje/100), 2)
-        LoggerSistema().registrar_evento(f"Descuento {porcentaje}% aplicado a reserva {self._id}")
+            
+        # Guardar el porcentaje aplicado (para mostrarlo en la tabla)
+        self._porcentaje_descuento = porcentaje
+            
+        # Calcular el valor del descuento (cuánto dinero se resta)
+        # Fórmula: precio_base * (porcentaje / 100)
+        self._valor_descuento = round(self._precio_base_total * (porcentaje / 100), 2)
+            
+        # Calcular el nuevo costo total (precio base - descuento)
+        self._costo_total = round(self._precio_base_total - self._valor_descuento, 2)
+            
+        # Registrar evento detallado en el log
+        LoggerSistema().registrar_evento(
+            f"Descuento {porcentaje}% aplicado a reserva {self._id}. "
+            f"Valor descuento: ${self._valor_descuento:,.0f}, "
+            f"Total final: ${self._costo_total:,.0f}"
+        )
     
     # ==================== MÉTODOS SOBRECARGADOS PARA CÁLCULO DE COSTOS ====================
     # ======================================================================================
@@ -452,74 +496,246 @@ class Reserva:
     # MÉTODO: demostrar_todas_sobrecargas, muestra ejemplos de todas las sobrecargas
     # Útil para verificar que todos los métodos sobrecargados funcionan correctamente
     # =====================================================================================================
+    
+    # ==================================================================================
+    # MÉTODO: demostrar_todas_sobrecargas
+    # Demuestra el POLIMORFISMO y los MÉTODOS SOBRECARGADOS
+    # Retorna un string con la demostración completa de los métodos sobrecargados
+    # muestra cálculos detallados (personas, equipo adicional, cantidad, seguro, premium)
+    # ==================================================================================
     def demostrar_todas_sobrecargas(self) -> str:
         
-        resultados = []
-        resultados.append("=" * 70)
-        resultados.append("📚 DEMOSTRACIÓN DE MÉTODOS SOBRECARGADOS")
-        resultados.append("=" * 70)
-        resultados.append(f"\n💰 COSTO ORIGINAL DE LA RESERVA: ${self._costo_total:,.2f}")
+        # Importar dentro del método para evitar import circular
+        from servicio import ReservaSalas, AlquilerEquipos, AsesoriaEspecializada
         
-        # 1. Parámetros por defecto
-        resultados.append("\n🔹 1. calcular_costo_con_impuesto()")
-        resultados.append(f"    - Con impuesto 19%: ${self.calcular_costo_con_impuesto():,.2f}")
-        resultados.append(f"    - Con impuesto 10%: ${self.calcular_costo_con_impuesto(10):,.2f}")
+        # ========== OBTENER INFORMACIÓN BÁSICA ==========
+        nombre_cliente = self._cliente.nombre
+        nombre_servicio = self._servicio.nombre
+        tipo_servicio = self._servicio.tipo.upper()
+        duracion = self._duracion_horas
+        parametros = self._parametros_extra
+        precio_base_total = self._precio_base_total
+        costo_total = self._costo_total
+        precio_por_hora = self._servicio.precio_base
         
-        # 2. Descuento
-        resultados.append("\n🔹 2. calcular_costo_con_descuento()")
-        resultados.append(f"    - Con 10% descuento: ${self.calcular_costo_con_descuento(10):,.2f}")
-        resultados.append(f"    - Con 20% descuento: ${self.calcular_costo_con_descuento(20):,.2f}")
+        linea_sep = "=" * 80
         
-        # 3. Impuesto y descuento
-        resultados.append("\n🔹 3. calcular_costo_con_impuesto_y_descuento()")
-        resultados.append(f"    - 19% impuesto, 10% descuento: ${self.calcular_costo_con_impuesto_y_descuento(19, 10):,.2f}")
-        resultados.append(f"    - 10% impuesto, 5% descuento: ${self.calcular_costo_con_impuesto_y_descuento(10, 5):,.2f}")
+        # ========== INICIAR MENSAJE ==========
+        mensaje = f"""
+{linea_sep}
+🧪 DEMOSTRACIÓN DE MÉTODOS SOBRECARGADOS (POLIMORFISMO)
+{linea_sep}
+
+📋 RESERVA ACTUAL:
+   • ID: {self._id}
+   • Cliente: {nombre_cliente}
+   • Servicio: {nombre_servicio} ({tipo_servicio})
+   • Duración: {duracion} horas
+   • Estado: {self._estado}
+
+{linea_sep}
+📝 PARÁMETROS EXTRA DE ESTA RESERVA:
+"""
         
-        # 4. Costo por persona
-        resultados.append("\n🔹 4. calcular_costo_por_persona()")
-        persona_result = self.calcular_costo_por_persona(5)
-        resultados.append(f"    - Para 5 personas: ${persona_result['costo_por_persona_final']:,.2f} c/u")
+        # Mostrar parámetros reales
+        if parametros:
+            for clave, valor in parametros.items():
+                if isinstance(valor, bool):
+                    valor_str = "✅ Sí" if valor else "❌ No"
+                else:
+                    valor_str = str(valor)
+                mensaje += f"   • {clave} = {valor_str}\n"
+        else:
+            mensaje += "   • No se ingresaron parámetros extra\n"
         
-        # 5. Personalizado con kwargs
-        resultados.append("\n🔹 5. calcular_costo_personalizado()")
-        custom = self.calcular_costo_personalizado(impuesto=19, descuento=10, membresia="vip")
-        resultados.append(f"    - Con membresía VIP + 19% impuesto - 10% desc: ${custom['costo_final']:,.2f}")
+        mensaje += f"""
+{linea_sep}
+💰 CÁLCULO DETALLADO DEL COSTO:
+"""
         
-        # 6. Costo acumulado
-        resultados.append("\n🔹 6. calcular_costo_acumulado()")
-        resultados.append(f"    - +$5,000 adicional: ${self.calcular_costo_acumulado(5000):,.2f}")
-        resultados.append(f"    - +$5,000 + $3,000: ${self.calcular_costo_acumulado(5000, 3000):,.2f}")
+        # ========== CASO 1: SERVICIO DE SALA ==========
+        if isinstance(self._servicio, ReservaSalas):
+            capacidad = self._servicio.capacidad
+            personas = parametros.get("personas", 0)
+            equipo_adicional = parametros.get("equipo_adicional", False)
+            
+            # Calcular precio base (sin descuento)
+            precio_base_calculado = precio_por_hora * duracion
+            
+            mensaje += f"""
+   🪑 **SERVICIO: SALA**
+   ───────────────────────────────────────────────────────────────────────────────
+   • Fórmula base: Precio Base × Horas
+   • Precio por hora: ${precio_por_hora:,.0f}
+   • Duración: {duracion} horas
+   • Precio BASE: ${precio_por_hora:,.0f} × {duracion} = ${precio_base_calculado:,.0f}
+   
+   📊 **VALIDACIÓN DE CAPACIDAD:**
+   • Personas ingresadas: {personas}
+   • Capacidad máxima de la sala: {capacidad} personas
+"""
+            
+            if personas <= capacidad:
+                mensaje += f"   • ✅ Válido: {personas} no excede la capacidad máxima de {capacidad}\n"
+            else:
+                mensaje += f"   • ❌ ADVERTENCIA: {personas} excede la capacidad máxima de {capacidad}\n"
+            
+            mensaje += f"""
+   🔄 **SOBRECARGA con 'equipo_adicional':**
+"""
+            
+            if equipo_adicional:
+                incremento = precio_base_calculado * 0.2
+                precio_con_equipo = precio_base_calculado + incremento
+                mensaje += f"""   • Equipo adicional: ✅ SÍ
+   • Incremento: +20% sobre el precio base
+   • Valor del incremento: ${incremento:,.0f}
+   • Precio con equipo adicional: ${precio_base_calculado:,.0f} + ${incremento:,.0f} = ${precio_con_equipo:,.0f}
+"""
+            else:
+                mensaje += f"""   • Equipo adicional: ❌ NO
+   • No se aplica incremento
+   • Precio sin equipo adicional: ${precio_base_calculado:,.0f}
+"""
+            
+            precio_base_total = precio_base_calculado
+            if equipo_adicional:
+                precio_base_total = precio_base_calculado * 1.2
         
-        # 7. Por tipo de cliente
-        resultados.append("\n🔹 7. calcular_costo_por_tipo_cliente()")
-        vip_result = self.calcular_costo_por_tipo_cliente("vip", True)
-        resultados.append(f"    - Cliente VIP: ${vip_result['costo_final']:,.2f}")
-        corporativo_result = self.calcular_costo_por_tipo_cliente("corporativo", True)
-        resultados.append(f"    - Cliente Corporativo: ${corporativo_result['costo_final']:,.2f}")
+        # ========== CASO 2: SERVICIO DE EQUIPO ==========
+        elif isinstance(self._servicio, AlquilerEquipos):
+            tipo_equipo = self._servicio.tipo_equipo
+            cantidad = parametros.get("cantidad", 1)
+            seguro = parametros.get("seguro", False)
+            
+            # Calcular precio base (sin descuento)
+            precio_base_calculado = precio_por_hora * duracion * cantidad
+            
+            mensaje += f"""
+   💻 **SERVICIO: ALQUILER DE EQUIPOS**
+   ───────────────────────────────────────────────────────────────────────────────
+   • Fórmula base: Precio Base × Horas × Cantidad
+   • Precio por hora por equipo: ${precio_por_hora:,.0f}
+   • Duración: {duracion} horas
+   • Cantidad de equipos: {cantidad}
+   • Precio BASE: ${precio_por_hora:,.0f} × {duracion} × {cantidad} = ${precio_base_calculado:,.0f}
+   
+   🔄 **SOBRECARGA con 'seguro':**
+"""
+            
+            if seguro:
+                cargo_seguro = 5000
+                precio_con_seguro = precio_base_calculado + cargo_seguro
+                mensaje += f"""   • Seguro: ✅ SÍ
+   • Cargo fijo por seguro: +${cargo_seguro:,.0f}
+   • Precio con seguro: ${precio_base_calculado:,.0f} + ${cargo_seguro:,.0f} = ${precio_con_seguro:,.0f}
+"""
+            else:
+                mensaje += f"""   • Seguro: ❌ NO
+   • No se aplica cargo por seguro
+   • Precio sin seguro: ${precio_base_calculado:,.0f}
+"""
+            
+            precio_base_total = precio_base_calculado
+            if seguro:
+                precio_base_total = precio_base_calculado + 5000
         
-        resultados.append("\n" + "=" * 70)
+        # ========== CASO 3: SERVICIO DE ASESORÍA ==========
+        elif isinstance(self._servicio, AsesoriaEspecializada):
+            nivel = self._servicio.nivel
+            tema = parametros.get("tema", "No especificado")
+            miembro_premium = parametros.get("miembro_premium", False)
+            
+            # Calcular precio base (sin descuento)
+            precio_base_calculado = precio_por_hora * duracion
+            
+            mensaje += f"""
+   📚 **SERVICIO: ASESORÍA ESPECIALIZADA**
+   ───────────────────────────────────────────────────────────────────────────────
+   • Fórmula base: Precio Base × Horas
+   • Precio por hora: ${precio_por_hora:,.0f}
+   • Duración: {duracion} horas
+   • Precio BASE: ${precio_por_hora:,.0f} × {duracion} = ${precio_base_calculado:,.0f}
+   • Nivel del experto: {nivel}
+   • Tema de la asesoría: "{tema}"
+   • Longitud del tema: {len(tema)} caracteres {'✅ Válido' if len(tema) >= 5 else '❌ Mínimo 5 caracteres'}
+   
+   🔄 **SOBRECARGA con 'miembro_premium':**
+"""
+            
+            if miembro_premium:
+                descuento = precio_base_calculado * 0.15
+                precio_con_descuento = precio_base_calculado - descuento
+                mensaje += f"""   • Miembro Premium: ✅ SÍ
+   • Descuento aplicado: 15%
+   • Valor del descuento: ${descuento:,.0f}
+   • Precio con descuento: ${precio_base_calculado:,.0f} - ${descuento:,.0f} = ${precio_con_descuento:,.0f}
+"""
+            else:
+                mensaje += f"""   • Miembro Premium: ❌ NO
+   • No se aplica descuento
+   • Precio sin descuento: ${precio_base_calculado:,.0f}
+"""
+            
+            precio_base_total = precio_base_calculado
+            if miembro_premium:
+                precio_base_total = precio_base_calculado * 0.85
         
-        return "\n".join(resultados)
+        # ========== SECCIÓN DE DESCUENTO ADICIONAL ==========
+        if self._porcentaje_descuento > 0:
+            valor_descuento = self._valor_descuento
+            porcentaje = self._porcentaje_descuento
+            mensaje += f"""
+{linea_sep}
+💸 **DESCUENTO ADICIONAL APLICADO A ESTA RESERVA:**
+   • Porcentaje de descuento: {porcentaje:.0f}%
+   • Valor del descuento: ${valor_descuento:,.0f}
+   • Precio SIN descuento adicional: ${precio_base_total:,.0f}
+   • Precio CON descuento adicional: ${costo_total:,.0f}
+   • Ahorro total: ${valor_descuento:,.0f}
+"""
+        
+        # ========== RESUMEN FINAL ==========
+        mensaje += f"""
+{linea_sep}
+🎯 **RESUMEN FINAL DE ESTA RESERVA:**
+   • Precio Base (sin ningún descuento): ${precio_base_total:,.0f}
+   • Descuento aplicado: {self._porcentaje_descuento:.0f}%
+   • Valor del descuento: ${self._valor_descuento:,.0f}
+   • TOTAL A PAGAR: ${costo_total:,.0f}
+{linea_sep}
+✅ Esto demuestra que los MÉTODOS SOBRECARGADOS y el POLIMORFISMO
+   están correctamente implementados en el sistema.
+   
+   El método `calcular_costo()` recibe parámetros variables (**kwargs)
+   y se comporta de manera diferente según:
+   1. El tipo de servicio (Sala, Equipo, Asesoría)
+   2. Los parámetros extra ingresados (personas, equipo_adicional, cantidad, seguro, tema, miembro_premium)
+"""
+        
+        return mensaje
     
     # ==================== MÉTODOS DE INFORMACIÓN =========================================================
     
     # =====================================================================================================
     # MÉTODO: obtener_info Retorna un diccionario con toda la información de la reserva
+    # Incluye precio_base, porcentaje_descuento, valor_descuento y parametros_extra
     # =====================================================================================================
     def obtener_info(self) -> dict:
         
-        # Retorna un DICCIONARIO con toda la información de la reserva
-        # RETORNA: dict {clave: valor}
-        
         return {
-            "id": self._id,
-            "cliente": self._cliente.nombre,
-            "cliente_id": self._cliente.id,
-            "servicio": self._servicio.nombre,
-            "servicio_id": self._servicio.id,
-            "duracion": self._duracion_horas,
-            "estado": self._estado,
-            "costo": self._costo_total,
+            "id": self._id, # ID de la reserva
+            "cliente": self._cliente.nombre, # Nombre del Cliente
+            "cliente_id": self._cliente.id, # ID del Cliente
+            "servicio": self._servicio.nombre, # Nombre del servicio
+            "servicio_id": self._servicio.id, # ID del servicio
+            "duracion": self._duracion_horas, # Duración de horas
+            "estado": self._estado, # Estado de la reserva
+            "precio_base": self._precio_base_total,           # Precio sin descuento
+            "costo_total": self._costo_total,                 # Precio con descuento
+            "porcentaje_descuento": self._porcentaje_descuento, # % descuento aplicado
+            "valor_descuento": self._valor_descuento,         # Valor en pesos del descuento
+            "parametros_extra": self._parametros_extra,       # Parámetros reales usados
             "fecha": self._fecha_reserva.strftime("%Y-%m-%d %H:%M"),
             "fecha_obj": self._fecha_reserva
         }
@@ -531,33 +747,74 @@ class Reserva:
     # Permiten acceder a los atributos privados de forma controlada, sin exponerlos directamente.
     # =====================================================================================================
     
-    # Getter para acceder al ID
+    # Retorna el ID
     @property
     def id(self) -> int:
         return self._id
     
-    # Getter para acceder al estado
+    # Retorna el estado
     @property
     def estado(self) -> str:
         return self._estado
     
-    # Getter para acceder a la fecha
+    # Retorna la fecha
     @property
     def fecha_reserva(self) -> datetime.datetime:
         return self._fecha_reserva
     
-    # Getter para acceder a la duración de horas
+    # Retorna la duración de horas
     @property
     def duracion_horas(self) -> float:
         return self._duracion_horas
     
-    # Getter para acceder al tipo de servicio
+    # Retorna el tipo de servicio
     @property
     def servicio_id(self) -> int:
         return self._servicio.id
     
-    # Getter para acceder al costo total
+    # Retorna el precio base sin descuento
+    @property
+    def precio_base_total(self) -> float:
+        
+        return self._precio_base_total
+    
+    # Retorna el porcentaje del descuento
+    @property
+    def porcentaje_descuento(self) -> float:
+        
+        return self._porcentaje_descuento
+    
+    # Retorna el valor del descuento
+    @property
+    def valor_descuento(self) -> float:
+        
+        return self._valor_descuento
+    
+    # Retorna los parámetros extra que se usaron
+    @property
+    def parametros_extra(self) -> dict:
+        
+        return self._parametros_extra
+    
+    # Retorna el costo total
     @property
     def costo_total(self) -> float:
         
         return self._costo_total
+    
+    # =====================================================================================================
+    # MÉTODO: esta_vencida, verifica si la reserva ya superó su fecha/hora de finalización
+    # Retorna True si la reserva está vencida, False en caso contrario
+    # =====================================================================================================
+    def esta_vencida(self) -> bool:
+        
+        # Calcular la fecha/hora de finalización
+        fecha_fin = self._fecha_reserva + datetime.timedelta(hours=self._duracion_horas)
+        
+        # Obtener la fecha/hora actual del sistema
+        ahora = datetime.datetime.now()
+        
+        # Si la fecha_fin es menor o igual a ahora → la reserva ya venció
+        return fecha_fin <= ahora
+    
+    
