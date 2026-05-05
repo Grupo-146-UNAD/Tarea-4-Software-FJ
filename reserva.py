@@ -133,21 +133,57 @@ class Reserva:
         
         self._estado = "CONFIRMADA"
         LoggerSistema().registrar_evento(f"Reserva {self._id} confirmada. Costo: ${self._costo_total}")
-    
+        
     # =====================================================================================================
-    # MÉTODO: cancelar Cambia estado a CANCELADA (desde PENDIENTE o CONFIRMADA) y registra el motivo
+    # MÉTODO: cancelar
+    # PROPÓSITO: Cancela una reserva (solo si NO está vencida)
+    # VALIDACIONES: 
+    #   1. No se puede cancelar si ya está COMPLETADA o CANCELADA
+    #   2. No se puede cancelar si la reserva ya VENCIÓ (fecha_fin < fecha_actual)
     # =====================================================================================================
     def cancelar(self, motivo: str = ""):
-        
-        # Cancela la reserva (desde PENDIENTE o CONFIRMADA)
-        
-        # Verifica que no esté ya completada o cancelada
+                
+        # ========== VALIDACIÓN 1: ESTADO NO PERMITIDO ==========
+        # Verificar que la reserva no esté ya COMPLETADA o CANCELADA
+        # Si está en alguno de estos estados, no se puede cancelar
         if self._estado in ["COMPLETADA", "CANCELADA"]:
+            # Lanzar excepción indicando que no se puede cancelar
             raise EstadoReservaInvalidoError(
                 f"No se puede cancelar reserva en estado {self._estado}"
             )
         
+        # ========== VALIDACIÓN 2: RESERVA VENCIDA (NUEVA) ==========
+        # Verificar si la reserva ya pasó su fecha/hora de finalización
+        # una reserva vencida NO se puede cancelar porque el servicio ya se prestó
+        
+        # Calcular la fecha/hora de finalización de la reserva
+        # fecha_fin = fecha_inicio + duracion_en_horas
+        fecha_fin = self._fecha_reserva + datetime.timedelta(hours=self._duracion_horas)
+        
+        # Obtener la fecha y hora actual del sistema
+        ahora = datetime.datetime.now()
+        
+        # Si la fecha_fin es MENOR o IGUAL a la hora actual → la reserva está VENCIDA
+        if fecha_fin <= ahora:
+            # Formatear fechas para mostrar en el mensaje de error
+            fecha_fin_str = fecha_fin.strftime('%Y-%m-%d %H:%M')
+            fecha_reserva_str = self._fecha_reserva.strftime('%Y-%m-%d %H:%M')
+            
+            # Lanzar excepción indicando que no se puede cancelar porque está vencida
+            raise EstadoReservaInvalidoError(
+                f"❌ No se puede cancelar la reserva #{self._id} porque ya está VENCIDA.\n"
+                f"📅 Fecha de reserva: {fecha_reserva_str}\n"
+                f"⏱️ Duración: {self._duracion_horas} horas\n"
+                f"🔚 Finalizó el: {fecha_fin_str}\n"
+                f"💡 Las reservas vencidas no se pueden cancelar porque el servicio ya fue prestado."
+            )
+        
+        # ========== CANCELAR LA RESERVA ==========
+        # Si pasa todas las validaciones, cambiar el estado a "CANCELADA"
         self._estado = "CANCELADA"
+        
+        # Registrar el evento en el archivo de logs
+        # Si no se proporcionó motivo, usar "No especificado"
         LoggerSistema().registrar_evento(
             f"Reserva {self._id} cancelada. Motivo: {motivo or 'No especificado'}"
         )
