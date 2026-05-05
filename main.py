@@ -121,10 +121,15 @@ class AplicacionFJ:
         self._configurar_estilos()
         self._crear_menu_principal()
         self._crear_widgets()
+        
+        # ========== CENTRAR VENTANA PRIMERO ==========
+        centrar_ventana(self.root, 1600, 850)
+        
+        # ========== CARGAR DATOS ==========
         self._actualizar_tablas()
         
-        # CENTRAR LA VENTANA PRINCIPAL - tamaño fijo para la ventana principal
-        centrar_ventana(self.root, 1600, 850)
+        # ========== FORZAR ACTUALIZACIÓN FINAL (sin efecto visual) ==========
+        self.root.after_idle(self._forzar_actualizacion_tablas)
         
         # Configurar manejador de cierre de ventana
         self.root.protocol("WM_DELETE_WINDOW", self._on_closing)
@@ -789,16 +794,18 @@ class AplicacionFJ:
                 total_str, estado_emoji, info["fecha"]
             ))
         
-        # Forzar actualización visual
-        self.reservas_tree.update_idletasks()
-        self.reservas_tree.see("")
+        # ========== FORZAR ACTUALIZACIÓN VISUAL DE LA TABLA ==========
+        # Esto evita que la tabla se quede "congelada" al cargar backup
+        self.reservas_tree.update_idletasks()  # Procesa eventos pendientes
+        self.reservas_tree.see("")             # Hace scroll al inicio
+        self.reservas_tree.update()            # Fuerza el redibujado completo
         
         # ========== ACTUALIZAR ESTADÍSTICAS ==========
         self.stats_clientes.config(text=f"Clientes: {len(self.sistema.obtener_clientes())}")
         self.stats_servicios.config(text=f"Servicios: {len(self.sistema.obtener_servicios())}")
         self.stats_reservas.config(text=f"Reservas: {len(self.sistema.obtener_reservas())}")
         self.status_bar.config(text="✅ Datos actualizados correctamente")
-    
+        
     # ==================== MÉTODOS DE SELECCIÓN ====================
     
     # =====================================================================================================
@@ -1070,22 +1077,16 @@ class AplicacionFJ:
         combo_tipo = ttk.Combobox(frame, values=["sala", "equipo", "asesoria"], width=44)
         combo_tipo.grid(row=0, column=1, pady=5, padx=10)
         
-        ttk.Label(frame, text="Nombre:",
-                font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=5)
-        entry_nombre = ttk.Entry(frame, width=40, 
-                font=('Segoe UI', 10))
+        ttk.Label(frame, text="Nombre:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=5)
+        entry_nombre = ttk.Entry(frame, width=40, font=('Segoe UI', 10))
         entry_nombre.grid(row=1, column=1, pady=5, padx=10)
         
-        ttk.Label(frame, text="Precio Base:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=5)
-        entry_precio = ttk.Entry(frame, width=40,
-                font=('Segoe UI', 10))
+        ttk.Label(frame, text="Precio Base:", font=('Segoe UI', 10, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=5)
+        entry_precio = ttk.Entry(frame, width=40, font=('Segoe UI', 10))
         entry_precio.grid(row=2, column=1, pady=5, padx=10)
         
-        ttk.Label(frame, text="Parámetro Extra:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=3, column=0, sticky=tk.W, pady=5)
-        entry_extra = ttk.Entry(frame, width=40,
-                font=('Segoe UI', 10))
+        ttk.Label(frame, text="Parámetro Extra:", font=('Segoe UI', 10, 'bold')).grid(row=3, column=0, sticky=tk.W, pady=5)
+        entry_extra = ttk.Entry(frame, width=40, font=('Segoe UI', 10))
         entry_extra.grid(row=3, column=1, pady=5, padx=10)
         
         # Mensaje informativo (wraplength: ajusta el texto a 350 píxeles)
@@ -1104,20 +1105,53 @@ class AplicacionFJ:
                 precio = float(entry_precio.get())
                 extra = entry_extra.get()
                 
+                # Validar que se haya seleccionado un tipo
+                if not tipo:
+                    messagebox.showerror("Error", "Debe seleccionar un tipo de servicio")
+                    return
+                
+                # Validar que el nombre no esté vacío
+                if not nombre:
+                    messagebox.showerror("Error", "Debe ingresar un nombre para el servicio")
+                    return
+                
                 # Conversión del parámetro extra según el tipo de servicio
                 if tipo == "sala":
-                    extra = int(extra)  # Capacidad debe ser número entero
+                    # Validar que la capacidad sea un número
+                    if not extra:
+                        messagebox.showerror("Error", "Debe ingresar la capacidad máxima de la sala")
+                        return
+                    try:
+                        extra = int(extra)
+                    except ValueError:
+                        messagebox.showerror("Error", "La capacidad debe ser un número entero")
+                        return
                 elif tipo == "equipo":
                     extra = extra  # Tipo de equipo como string
+                    if not extra:
+                        messagebox.showerror("Error", "Debe ingresar el tipo de equipo")
+                        return
                 elif tipo == "asesoria":
                     extra = extra  # Nivel como string
+                    if not extra:
+                        messagebox.showerror("Error", "Debe ingresar el nivel de experto")
+                        return
                 else:
-                    raise Exception("Seleccione un tipo de servicio")
+                    messagebox.showerror("Error", "Seleccione un tipo de servicio válido")
+                    return
                 
-                self.sistema.agregar_servicio(tipo, nombre, precio, extra)
-                self._actualizar_tablas()
-                messagebox.showinfo("Éxito", "Servicio agregado correctamente")
-                dialog.destroy()
+                # ========== CORRECCIÓN: Verificar si el servicio se creó ==========
+                servicio_creado = self.sistema.agregar_servicio(tipo, nombre, precio, extra)
+                
+                # Si el servicio se creó correctamente (no es None)
+                if servicio_creado is not None:
+                    self._actualizar_tablas()
+                    messagebox.showinfo("Éxito", "Servicio agregado correctamente")
+                    dialog.destroy()
+                else:
+                    # Si el servicio NO se creó, mostrar mensaje de error
+                    messagebox.showerror("Error", "No se pudo crear el servicio. Verifique los datos ingresados.")
+                
             except ValueError:
                 messagebox.showerror("Error", "Precio debe ser un número válido")
             except Exception as e:
@@ -2452,6 +2486,21 @@ class AplicacionFJ:
         
         # Centrar la ventana con el tamaño calculado
         centrar_ventana(dialog, ancho_final, alto_final) 
+    # ===================================================================================================== 
+    # Fuerza la actualización visual de la tabla de reservas
+    # =====================================================================================================     
+    def _forzar_actualizacion_tablas(self):
+        
+        try:
+            # Forzar actualización de la tabla
+            for item in self.reservas_tree.get_children():
+                # Esto fuerza el refresco visual
+                self.reservas_tree.item(item, values=self.reservas_tree.item(item, 'values'))
+            self.reservas_tree.update_idletasks()
+            self.reservas_tree.update()
+            self.status_bar.config(text="✅ Tablas actualizadas correctamente")
+        except Exception as e:
+            print(f"Error en actualización forzada: {e}")
         
 # ==================== PUNTO DE ENTRADA PRINCIPAL =========================================================
 # Este bloque se ejecuta SOLO cuando el script se ejecuta directamente

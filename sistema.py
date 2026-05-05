@@ -712,12 +712,11 @@ class SistemaGestionFJ:
     # El método agregar_servicio valida campos obligatorios, formatos y parámetros extra
     # según el tipo de servicio
     # =====================================================================================================
+        # =====================================================================================================
+    # El método agregar_servicio valida campos obligatorios, formatos y parámetros extra
+    # según el tipo de servicio
+    # =====================================================================================================
     def agregar_servicio(self, tipo: str, nombre: str, precio_base: float, param_extra) -> Optional[Servicio]:
-        
-        # MÉTODO: agregar_servicio
-        # PROPÓSITO: Crea y almacena un nuevo servicio con validaciones específicas según el tipo.
-        # PARÁMETROS: tipo, nombre, precio_base, param_extra
-        # RETORNA: Objeto Servicio o None si hay error
         
         try:
             # =============================================================================================
@@ -738,23 +737,20 @@ class SistemaGestionFJ:
             
             # Validar el campo param_extra según el tipo de servicio
             if tipo == "sala":
-                
                 # Para sala, se espera un número entero que indique la capacidad
-                if not param_extra or param_extra <= 0:
+                if param_extra is None or param_extra <= 0:
                     raise ServicioNoDisponibleError(f"La capacidad de la sala debe ser mayor a 0: {param_extra}")
             
             # Para equipo, se espera un string con al menos 3 caracteres que indique el tipo de equipo
             elif tipo == "equipo":
-                
                 # Validar que el tipo de equipo tenga al menos 3 caracteres
-                if not param_extra or len(str(param_extra)) < 3:
+                if param_extra is None or len(str(param_extra)) < 3:
                     raise ServicioNoDisponibleError(f"El tipo de equipo debe tener al menos 3 caracteres: '{param_extra}'")
             
             # Para asesoría, se espera un string con al menos 3 caracteres que indique el nivel de experto
             elif tipo == "asesoria":
-                
                 # Validar que el nivel de experto tenga al menos 3 caracteres
-                if not param_extra or len(str(param_extra)) < 3:
+                if param_extra is None or len(str(param_extra)) < 3:
                     raise ServicioNoDisponibleError(f"El nivel de experto debe tener al menos 3 caracteres: '{param_extra}'")
             
             # Si todas las validaciones pasan, se crea el servicio correspondiente
@@ -783,19 +779,16 @@ class SistemaGestionFJ:
             # Retorna el servicio creado exitosamente
             return servicio
             
-        except ServicioNoDisponibleError as e: # Captura errores específicos de validación de servicios
-            
-            # Registrar el error pero NO hacer raise para que continúe la carga
-            self.logger.registrar_evento(f"Error al agregar servicio: {str(e)}")
-            
-            return None # Retorna None para indicar que no se creó el servicio debido a validaciones fallidas
+        except ServicioNoDisponibleError as e:
+            # ========== CORRECCIÓN: Registrar el error como RECHAZO ==========
+            # Esto es un error ESPERADO - el servicio fue correctamente RECHAZADO
+            self.logger.registrar_evento(f"  ❌ Servicio inválido RECHAZADO: {str(e)}")
+            return None  # Retorna None para indicar que NO se creó el servicio
         
-        except Exception as e: # Captura cualquier otra excepción que ocurra durante el proceso
-            
-            # Registrar el error en el log con contexto del método y el tipo de servicio
+        except Exception as e:
+            # Captura cualquier otra excepción que ocurra durante el proceso
             self.logger.registrar_error(e, f"agregar_servicio - tipo: {tipo}")
-            
-            return None # Retorna None para indicar que no se creó el servicio debido a un error inesperado
+            return None  # Retorna None para indicar que no se creó el servicio debido a un error inesperado
     
     # =====================================================================================================
     # El método actualizar_servicio permite modificar los datos de un servicio existente
