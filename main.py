@@ -564,7 +564,7 @@ class AplicacionFJ:
         btn_descuento.pack(side=tk.LEFT, padx=5)
         
         # Botón para probar métodos sobrecargados
-        btn_sobrecargados = ttk.Button(btn_frame, text="🧪 Probar Métodos Sobrecargados", 
+        btn_sobrecargados = ttk.Button(btn_frame, text="📊 Ver Métodos Sobrecargados", 
                 command=self._probar_sobrecarga_reserva_seleccionada,
                 style='Orange.TButton')  # ← Cambiado a Orange.TButton
         btn_sobrecargados.pack(side=tk.LEFT, padx=5)
@@ -1487,20 +1487,57 @@ class AplicacionFJ:
         
         # ========== CENTRAR VENTANA ==========
         centrar_ventana(dialog, 550, 580)
+    
     # =====================================================================================================
-    # MÉTODO: _confirmar_reserva_seleccionada, confirma la reserva seleccionada (cambia estado a CONFIRMADA)
+    # MÉTODO: _confirmar_reserva_seleccionada
+    # Confirma la reserva seleccionada en la tabla
+    # No permite confirmar reservas vencidas
     # =====================================================================================================
     def _confirmar_reserva_seleccionada(self):
-        
+    
+        # Obtener el ID de la reserva seleccionada
         id_reserva = self._obtener_reserva_seleccionada()
+        
+        # Si no hay reserva seleccionada, salir
         if not id_reserva:
             return
         
         try:
+            # Buscar la reserva en el sistema
+            reserva = next((r for r in self.sistema.obtener_reservas() if r.id == id_reserva), None)
+            
+            # Si no se encuentra la reserva, mostrar error
+            if not reserva:
+                messagebox.showerror("Error", "No se encontró la reserva")
+                return
+            
+            # ========== VALIDACIÓN: RESERVA VENCIDA ==========
+            # Verificar si la reserva está vencida
+            if reserva.esta_vencida():
+                # Calcular fecha de finalización
+                fecha_fin = reserva.fecha_reserva + datetime.timedelta(hours=reserva.duracion_horas)
+                fecha_fin_str = fecha_fin.strftime('%Y-%m-%d %H:%M')
+                
+                # Mostrar mensaje de error
+                messagebox.showerror(
+                    "Error", 
+                    f"❌ No se puede confirmar la reserva #{id_reserva} porque ya está VENCIDA.\n"
+                    f"📅 Finalizó el: {fecha_fin_str}\n"
+                    f"💡 Las reservas vencidas no se pueden modificar."
+                )
+                return
+            
+            # Confirmar la reserva
             self.sistema.confirmar_reserva(id_reserva)
+            
+            # Actualizar las tablas
             self._actualizar_tablas()
+            
+            # Mostrar mensaje de éxito
             messagebox.showinfo("Éxito", "Reserva confirmada correctamente")
+            
         except Exception as e:
+            # Mostrar error si ocurre algún problema
             messagebox.showerror("Error", str(e))
     
     # =====================================================================================================
@@ -1523,19 +1560,55 @@ class AplicacionFJ:
             messagebox.showerror("Error", str(e))
     
     # =====================================================================================================
-    # MÉTODO: _completar_reserva_seleccionada, completa la reserva seleccionada (cambia estado a COMPLETADA)
+    # MÉTODO: _completar_reserva_seleccionada
+    # Completa la reserva seleccionada en la tabla
+    # No permite completar reservas vencidas
     # =====================================================================================================
     def _completar_reserva_seleccionada(self):
         
+        # Obtener el ID de la reserva seleccionada
         id_reserva = self._obtener_reserva_seleccionada()
+        
+        # Si no hay reserva seleccionada, salir
         if not id_reserva:
             return
         
         try:
+            # Buscar la reserva en el sistema
+            reserva = next((r for r in self.sistema.obtener_reservas() if r.id == id_reserva), None)
+            
+            # Si no se encuentra la reserva, mostrar error
+            if not reserva:
+                messagebox.showerror("Error", "No se encontró la reserva")
+                return
+            
+            # ========== VALIDACIÓN: RESERVA VENCIDA ==========
+            # Verificar si la reserva está vencida
+            if reserva.esta_vencida():
+                # Calcular fecha de finalización
+                fecha_fin = reserva.fecha_reserva + datetime.timedelta(hours=reserva.duracion_horas)
+                fecha_fin_str = fecha_fin.strftime('%Y-%m-%d %H:%M')
+                
+                # Mostrar mensaje de error
+                messagebox.showerror(
+                    "Error", 
+                    f"❌ No se puede completar la reserva #{id_reserva} porque ya está VENCIDA.\n"
+                    f"📅 Finalizó el: {fecha_fin_str}\n"
+                    f"💡 Las reservas vencidas ya no se pueden modificar."
+                )
+                return
+            
+            # Completar la reserva
             self.sistema.completar_reserva(id_reserva)
+            
+            # Actualizar las tablas
             self._actualizar_tablas()
+            
+            # Mostrar mensaje de éxito
             messagebox.showinfo("Éxito", "Reserva completada correctamente")
+            
         except Exception as e:
+            # Mostrar error si ocurre algún problema
             messagebox.showerror("Error", str(e))
     
     # =====================================================================================================
@@ -2223,6 +2296,7 @@ class AplicacionFJ:
     # ===================================================================================================== 
     def _ver_detalles_reserva_doble_clic(self, event):
         
+        # ========== OBTENER RESERVA SELECCIONADA ==========
         # Obtener el ID de la reserva seleccionada en la tabla
         id_reserva = self._obtener_reserva_seleccionada()
         
@@ -2232,7 +2306,6 @@ class AplicacionFJ:
             return
         
         # Buscar la reserva completa en el sistema por su ID
-        # next() busca el primer elemento que cumple la condición
         reserva = next((r for r in self.sistema.obtener_reservas() if r.id == id_reserva), None)
         
         # Si no se encuentra la reserva, mostrar error
@@ -2243,110 +2316,94 @@ class AplicacionFJ:
         # Obtener toda la información de la reserva como diccionario
         info = reserva.obtener_info()
         
-        # ========== CREAR VENTANA DE DETALLES ==========
+        # ========== CREAR VENTANA DE DETALLES (SIN SCROLLBAR) ==========
         # Toplevel() crea una ventana hija de la ventana principal
         dialog = tk.Toplevel(self.root)
         dialog.title(f"Detalles de la Reserva #{id_reserva}")
         dialog.transient(self.root)  # Hace que sea hija de la ventana principal
         dialog.grab_set()  # Ventana modal (bloquea otras ventanas)
         
-        # Frame principal con padding de 20 píxeles
-        frame = ttk.Frame(dialog, padding="20")
+        # ========== FRAME PRINCIPAL (SIN SCROLLBAR) ==========
+        # Frame con padding de 15 píxeles
+        frame = ttk.Frame(dialog, padding="15")
         frame.pack(fill=tk.BOTH, expand=True)
         
-        # ========== CREAR CANVAS CON SCROLL PARA CONTENIDO LARGO ==========
-        # Esto permite que la ventana tenga scroll si el contenido es muy extenso
-        canvas = tk.Canvas(frame)
-        scrollbar = ttk.Scrollbar(frame, orient="vertical", command=canvas.yview)
-        scrollable_frame = ttk.Frame(canvas)
-        
-        # Configurar el frame desplazable
-        scrollable_frame.bind(
-            "<Configure>",
-            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
-        )
-        
-        # Crear ventana dentro del canvas
-        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
-        canvas.configure(yscrollcommand=scrollbar.set)
-        
-        # Posicionar canvas y scrollbar
-        canvas.pack(side="left", fill="both", expand=True)
-        scrollbar.pack(side="right", fill="y")
-        
         # ========== TÍTULO PRINCIPAL ==========
-        ttk.Label(scrollable_frame, text="📋 DETALLES COMPLETOS DE LA RESERVA", 
-                font=('Segoe UI', 14, 'bold'), foreground=self.colores["primary"]).pack(pady=(0, 15))
+        titulo = ttk.Label(
+            frame, 
+            text="📋 DETALLES COMPLETOS DE LA RESERVA", 
+            font=('Segoe UI', 14, 'bold'), 
+            foreground=self.colores["primary"]
+        )
+        titulo.pack(pady=(0, 15))
         
         # ========== SECCIÓN 1: INFORMACIÓN GENERAL ==========
-        general_frame = ttk.LabelFrame(scrollable_frame, text="Información General", padding="10")
+        # Frame con borde y título
+        general_frame = ttk.LabelFrame(frame, text="Información General", padding="10")
         general_frame.pack(fill=tk.X, pady=5)
         
+        # Configurar grid para 2 columnas
+        general_frame.columnconfigure(0, weight=0)
+        general_frame.columnconfigure(1, weight=1)
+        
         # Mostrar ID de la reserva
-        ttk.Label(general_frame, text="ID de Reserva:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=2)
-        ttk.Label(general_frame, text=f"{info['id']}", 
-                font=('Segoe UI', 10)).grid(row=0, column=1, sticky=tk.W, pady=2, padx=10)
+        ttk.Label(general_frame, text="ID de Reserva:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=3)
+        ttk.Label(general_frame, text=f"{info['id']}", font=('Segoe UI', 10)).grid(row=0, column=1, sticky=tk.W, padx=10, pady=3)
         
         # Mostrar nombre del cliente
-        ttk.Label(general_frame, text="Cliente:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=2)
-        ttk.Label(general_frame, text=f"{info['cliente']}", 
-                font=('Segoe UI', 10)).grid(row=1, column=1, sticky=tk.W, pady=2, padx=10)
+        ttk.Label(general_frame, text="Cliente:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=3)
+        ttk.Label(general_frame, text=f"{info['cliente']}", font=('Segoe UI', 10)).grid(row=1, column=1, sticky=tk.W, padx=10, pady=3)
         
         # Mostrar nombre del servicio
-        ttk.Label(general_frame, text="Servicio:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=2)
-        ttk.Label(general_frame, text=f"{info['servicio']}", 
-                font=('Segoe UI', 10)).grid(row=2, column=1, sticky=tk.W, pady=2, padx=10)
+        ttk.Label(general_frame, text="Servicio:", font=('Segoe UI', 10, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=3)
+        ttk.Label(general_frame, text=f"{info['servicio']}", font=('Segoe UI', 10)).grid(row=2, column=1, sticky=tk.W, padx=10, pady=3)
         
         # Mostrar duración en horas
-        ttk.Label(general_frame, text="Duración:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=3, column=0, sticky=tk.W, pady=2)
-        ttk.Label(general_frame, text=f"{info['duracion']} horas",
-                font=('Segoe UI', 10)).grid(row=3, column=1, sticky=tk.W, pady=2, padx=10)
+        ttk.Label(general_frame, text="Duración:", font=('Segoe UI', 10, 'bold')).grid(row=3, column=0, sticky=tk.W, pady=3)
+        ttk.Label(general_frame, text=f"{info['duracion']} horas", font=('Segoe UI', 10)).grid(row=3, column=1, sticky=tk.W, padx=10, pady=3)
         
         # Mostrar estado con emoji para mejor visualización
-        ttk.Label(general_frame, text="Estado:", 
-                font=('Segoe UI', 10, 'bold')).grid(row=4, column=0, sticky=tk.W, pady=2)
+        ttk.Label(general_frame, text="Estado:", font=('Segoe UI', 10, 'bold')).grid(row=4, column=0, sticky=tk.W, pady=3)
         estado_emoji = {
             "PENDIENTE": "⏳ Pendiente",
             "CONFIRMADA": "✅ Confirmada",
             "CANCELADA": "❌ Cancelada",
             "COMPLETADA": "🏁 Completada"
         }.get(info['estado'], info['estado'])
-        ttk.Label(general_frame, text=estado_emoji,
-                font=('Segoe UI', 10)).grid(row=4, column=1, sticky=tk.W, pady=2, padx=10)
+        ttk.Label(general_frame, text=estado_emoji, font=('Segoe UI', 10)).grid(row=4, column=1, sticky=tk.W, padx=10, pady=3)
         
         # Mostrar fecha de la reserva
-        ttk.Label(general_frame, text="Fecha:",
-                font=('Segoe UI', 10, 'bold')).grid(row=5, column=0, sticky=tk.W, pady=2)
-        ttk.Label(general_frame, text=f"{info['fecha']}",
-                font=('Segoe UI', 10)).grid(row=5, column=1, sticky=tk.W, pady=2, padx=10)
+        ttk.Label(general_frame, text="Fecha:", font=('Segoe UI', 10, 'bold')).grid(row=5, column=0, sticky=tk.W, pady=3)
+        ttk.Label(general_frame, text=f"{info['fecha']}", font=('Segoe UI', 10)).grid(row=5, column=1, sticky=tk.W, padx=10, pady=3)
         
-        # Mostrar si la reserva está vencida (opcional)
+        # Mostrar si la reserva está vencida (con color rojo)
         if reserva.esta_vencida():
             ttk.Label(general_frame, text="⚠️ Esta reserva ya VENCIÓ", 
-                font=('Segoe UI', 9, 'bold'), foreground="red").grid(row=6, column=0, columnspan=2, pady=5)
+                    font=('Segoe UI', 9, 'bold'), foreground="red").grid(row=6, column=0, columnspan=2, pady=5)
         
-        # ========== SECCIÓN 2: PARÁMETROS EXTRA ==========
-        params_frame = ttk.LabelFrame(scrollable_frame, text="📝 Parámetros Extra Usados", padding="10")
+        # ========== SECCIÓN 2: PARÁMETROS EXTRA (COMPLETOS) ==========
+        params_frame = ttk.LabelFrame(frame, text="📝 Parámetros Extra Usados", padding="10")
         params_frame.pack(fill=tk.X, pady=5)
         
         # Verificar si hay parámetros extra
         if info.get("parametros_extra") and len(info["parametros_extra"]) > 0:
+            # Configurar grid para 2 columnas
+            params_frame.columnconfigure(0, weight=0)
+            params_frame.columnconfigure(1, weight=1)
+            
             # Recorrer cada parámetro y mostrarlo en una fila
             row = 0
             for key, value in info["parametros_extra"].items():
                 # Convertir booleanos a texto legible
                 if isinstance(value, bool):
-                    value_str = "Sí" if value else "No"
+                    value_str = "✅ Sí" if value else "❌ No"
                 else:
                     value_str = str(value)
                 
-                # Mostrar clave y valor
+                # Mostrar clave (nombre del parámetro)
                 ttk.Label(params_frame, text=f"{key}:", font=('Segoe UI', 10, 'bold')).grid(row=row, column=0, sticky=tk.W, pady=2)
-                ttk.Label(params_frame, text=value_str, font=('Segoe UI', 10)).grid(row=row, column=1, sticky=tk.W, pady=2, padx=10)
+                # Mostrar valor del parámetro
+                ttk.Label(params_frame, text=value_str, font=('Segoe UI', 10)).grid(row=row, column=1, sticky=tk.W, padx=10, pady=2)
                 row += 1
         else:
             # Mensaje si no hay parámetros
@@ -2354,31 +2411,47 @@ class AplicacionFJ:
                     font=('Segoe UI', 10), foreground="gray").pack()
         
         # ========== SECCIÓN 3: INFORMACIÓN FINANCIERA COMPLETA ==========
-        financial_frame = ttk.LabelFrame(scrollable_frame, text="💰 Información Financiera", padding="10")
+        financial_frame = ttk.LabelFrame(frame, text="💰 Información Financiera", padding="10")
         financial_frame.pack(fill=tk.X, pady=5)
         
+        # Configurar grid para 2 columnas
+        financial_frame.columnconfigure(0, weight=0)
+        financial_frame.columnconfigure(1, weight=1)
+        
         # Mostrar precio base (sin descuento)
-        ttk.Label(financial_frame, text="Precio Base:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=2)
-        ttk.Label(financial_frame, text=f"${info['precio_base']:,.0f}", font=('Segoe UI', 10)).grid(row=0, column=1, sticky=tk.W, pady=2, padx=10)
+        ttk.Label(financial_frame, text="Precio Base:", font=('Segoe UI', 10, 'bold')).grid(row=0, column=0, sticky=tk.W, pady=3)
+        ttk.Label(financial_frame, text=f"${info['precio_base']:,.0f}", font=('Segoe UI', 10)).grid(row=0, column=1, sticky=tk.W, padx=10, pady=3)
         
         # Mostrar descuento si hay
         if info['porcentaje_descuento'] > 0:
-            ttk.Label(financial_frame, text="Descuento aplicado:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=2)
+            ttk.Label(financial_frame, text="Descuento aplicado:", font=('Segoe UI', 10, 'bold')).grid(row=1, column=0, sticky=tk.W, pady=3)
             ttk.Label(financial_frame, text=f"{info['porcentaje_descuento']:.0f}% (${info['valor_descuento']:,.0f})", 
-                    font=('Segoe UI', 10), foreground="green").grid(row=1, column=1, sticky=tk.W, pady=2, padx=10)
+                font=('Segoe UI', 10), foreground="green").grid(row=1, column=1, sticky=tk.W, padx=10, pady=3)
         
-        # Mostrar total a pagar (con descuento aplicado)
+        # Mostrar total a pagar (con descuento aplicado) - más grande y en negrita
         ttk.Label(financial_frame, text="TOTAL A PAGAR:", font=('Segoe UI', 12, 'bold')).grid(row=2, column=0, sticky=tk.W, pady=5)
         ttk.Label(financial_frame, text=f"${info['costo_total']:,.0f}", 
-                font=('Segoe UI', 14, 'bold'), foreground=self.colores["primary"]).grid(row=2, column=1, sticky=tk.W, pady=5, padx=10)
+                font=('Segoe UI', 14, 'bold'), foreground=self.colores["primary"]).grid(row=2, column=1, sticky=tk.W, padx=10, pady=5)
         
-        # Botón Cerrar
-        btn_frame = ttk.Frame(scrollable_frame)
+        # ========== BOTÓN CERRAR ==========
+        btn_frame = ttk.Frame(frame)
         btn_frame.pack(pady=15)
         ttk.Button(btn_frame, text="Cerrar", command=dialog.destroy, style='Primary.TButton').pack()
         
-        # La ventana se ajusta automáticamente al contenido
-        centrar_ventana(dialog, 550, 600)  
+        # ========== CALCULAR TAMAÑO ÓPTIMO DE LA VENTANA ==========
+        # Forzar actualización para obtener las dimensiones reales
+        dialog.update_idletasks()
+        
+        # Obtener el ancho y alto que la ventana NECESITA para mostrar todo el contenido
+        ancho_necesario = dialog.winfo_reqwidth() + 40  # +40 de margen
+        alto_necesario = dialog.winfo_reqheight() + 40  # +40 de margen
+        
+        # Limitar tamaños máximos (opcional, para pantallas pequeñas)
+        ancho_final = min(ancho_necesario, 800)  # Máximo 800 píxeles de ancho
+        alto_final = min(alto_necesario, 600)   # Máximo 600 píxeles de alto
+        
+        # Centrar la ventana con el tamaño calculado
+        centrar_ventana(dialog, ancho_final, alto_final) 
         
 # ==================== PUNTO DE ENTRADA PRINCIPAL =========================================================
 # Este bloque se ejecuta SOLO cuando el script se ejecuta directamente
