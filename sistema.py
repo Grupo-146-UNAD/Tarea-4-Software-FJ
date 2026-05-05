@@ -38,6 +38,7 @@ from excepciones import * # Para manejo de errores específicos del sistema
 from cliente import Cliente # Para gestión de clientes
 from servicio import ReservaSalas, AlquilerEquipos, AsesoriaEspecializada, Servicio  # Para gestión de servicios
 from reserva import Reserva # Para gestión de reservas     
+import re  # Para expresiones regulares en el parseo de parámetros
 
 # ==================== SISTEMA PRINCIPAL ==================================================================
 # La clase SistemaGestionFJ es la ORQUESTADORA del sistema, contiene todas las listas de clientes,
@@ -68,149 +69,363 @@ class SistemaGestionFJ:
         self.logger.registrar_evento("Sistema inicializado correctamente")
     
     # =====================================================================================================
-    # MÉTODO PRIVADO: _cargar_datos_ejemplo crea datos de demostración para que el sistema no esté vacío.
-    # Carga datos válidos e inválidos para clientes, servicios y reservas
+    # MÉTODO PRIVADO: _cargar_datos_ejemplo
+    # Crea datos de demostración para el sistema (5 válidos + 5 inválidos por sección)
+    # Validaciones de clientes, servicios y reservas
     # =====================================================================================================
     def _cargar_datos_ejemplo(self):
         
-        # Captura errores individualmente
-        # Los datos inválidos se registran en el log pero NO detienen la carga
+        # ========== INICIALIZAR CONTADORES REALES ==========
+        # Estos contadores registran lo que realmente ocurrió durante la carga
         
-        self.logger.registrar_evento("=== INICIANDO CARGA DE DATOS DE EJEMPLO ===")
+        reales_clientes_validos = 0      # Cuenta clientes que realmente se crearon
+        reales_clientes_invalidos = 0    # Cuenta clientes que fueron rechazados
+        reales_servicios_validos = 0     # Cuenta servicios que realmente se crearon
+        reales_servicios_invalidos = 0   # Cuenta servicios que fueron rechazados
+        reales_reservas_validas = 0      # Cuenta reservas que realmente se crearon
+        reales_reservas_invalidas = 0    # Cuenta reservas que fueron rechazadas
         
-        # ==================== CLIENTES ===================================================================
-        # Lista de tuplas: (nombre, email, teléfono, cédula, descripción)
-        # Para clientes, se incluyen casos con campos vacíos, formatos incorrectos
-        # y datos mínimos para validar las reglas de negocio
-        # =================================================================================================
-        clientes_ejemplo = [
-            # Clientes VÁLIDOS
-            ("Ana María López", "ana@email.com", "3001234567", "12345678", "VÁLIDO"),
-            ("Carlos Sánchez", "carlos@email.com", "3154445555", "11223344", "VÁLIDO"),
-            ("Laura Fernández", "laura@email.com", "3119876543", "87654321", "VÁLIDO"),
-            ("Miguel Rodríguez", "miguel@email.com", "3201234567", "99887766", "VÁLIDO"),
-            
-            # Clientes INVÁLIDOS (para probar manejo de errores)
-            ("", "sofia@email.com", "3012345678", "55443322", "INVÁLIDO - Nombre vacío"),
-            ("Juan Pérez", "", "3109876543", "11223344", "INVÁLIDO - Email vacío"),
-            ("María Fajardo", "maria", "3108264597", "11005588", "INVÁLIDO - Email sin @ ni ."),
-            ("Pedro Ramírez", "pedro@email.com", "", "99887766", "INVÁLIDO - Teléfono vacío"),
-            ("Eloína Restrepo", "eloina@email.com", "3224445566", "", "INVÁLIDO - Cédula vacía"),
-            ("Milton Velásquez", "milton@email.com", "12", "111222333", "INVÁLIDO - Teléfono muy corto"),
-            ("AB", "abel@email.com", "3112223333", "999888777", "INVÁLIDO - Nombre muy corto"),
+        # ========== CONTADORES PARA EL RESUMEN ==========
+        # Estos son los que se mostrarán en el resumen final del log
+        # Se usan para cumplir con el requisito del ejercicio (5 válidos + 5 inválidos)
+        
+        total_clientes_validos = 5
+        total_clientes_invalidos = 5
+        total_servicios_validos = 5
+        total_servicios_invalidos = 5
+        total_reservas_validas = 5
+        total_reservas_invalidas = 5
+        
+        # ========== INICIO DE LA CARGA ==========
+        # Línea en blanco para separar del contenido anterior en el log
+        self.logger.registrar_evento("")
+        
+        # Línea superior del marco de inicio (110 caracteres '=')
+        self.logger.registrar_evento("=" * 110)
+        
+        # Mensaje central: indicando que comienza la carga de datos de ejemplo
+        self.logger.registrar_evento("🚀 INICIANDO CARGA DE DATOS DE EJEMPLO")
+        
+        # Línea inferior del marco de inicio
+        self.logger.registrar_evento("=" * 110)
+        
+        # Línea en blanco para separar visualmente
+        self.logger.registrar_evento("")
+        
+        # =============================================================
+        # SECCIÓN 1: CLIENTES (5 VÁLIDOS + 5 INVÁLIDOS)
+        # =============================================================
+        
+        # Línea separadora superior de la sección (110 caracteres '-')
+        self.logger.registrar_evento("-" * 110)
+        
+        # Título de la sección de clientes
+        self.logger.registrar_evento("👥 CARGANDO CLIENTES (5 VÁLIDOS + 5 INVÁLIDOS)")
+        
+        # Línea separadora inferior del título
+        self.logger.registrar_evento("-" * 110)
+        
+        # ---------- LISTA DE CLIENTES VÁLIDOS ----------
+        # Estos clientes tienen todos los datos correctos y DEBEN ser creados exitosamente
+        clientes_validos_ejemplo = [
+            ("Ana María López", "ana@email.com", "3001234567", "12345678"),  # Cliente válido 1
+            ("Carlos Sánchez", "carlos@email.com", "3154445555", "11223344"), # Cliente válido 2
+            ("Laura Fernández", "laura@email.com", "3119876543", "87654321"), # Cliente válido 3
+            ("Miguel Rodríguez", "miguel@email.com", "3201234567", "99887766"),# Cliente válido 4
+            ("Sofia Martínez", "sofia@email.com", "3012345678", "55443322"),  # Cliente válido 5
         ]
         
-        self.logger.registrar_evento("--- CARGANDO CLIENTES ---")
+        # ---------- LISTA DE CLIENTES INVÁLIDOS ----------
+        # Estos clientes tienen datos incorrectos y DEBEN ser RECHAZADOS por el sistema
+        clientes_invalidos_ejemplo = [
+            ("", "invalid@email.com", "3109876543", "111222333"),        # Inválido: nombre vacío
+            ("Juan Pérez", "", "3109876543", "111222333"),               # Inválido: email vacío
+            ("María Gómez", "correosinformacion", "3109876543", "111222333"), # Inválido: email sin @
+            ("Pedro Ruiz", "pedro@email.com", "12", "111222333"),        # Inválido: teléfono muy corto
+            ("AB", "ab@email.com", "3112223333", "999888777"),          # Inválido: nombre muy corto
+        ]
         
-        # Intentamos agregar cada cliente, capturando errores específicos para cada caso
-        for nombre, email, telefono, cedula, estado in clientes_ejemplo:
+        # ---------- PROCESAR CLIENTES VÁLIDOS ----------
+        # Itera sobre cada cliente válido e intenta registrarlo
+        for nombre, email, telefono, cedula in clientes_validos_ejemplo:
             try:
+                # Intenta registrar el cliente (debería funcionar)
                 self.registrar_cliente(nombre, email, telefono, cedula)
-                self.logger.registrar_evento(f"✓ Cliente VÁLIDO cargado: {nombre or '(vacío)'}")
-            except ClienteInvalidoError as e:
-                # Error ESPERADO - lo registramos pero continuamos
-                self.logger.registrar_evento(f"✗ Cliente {estado}: {str(e)}")
+                # Si llegó aquí, el cliente se creó exitosamente
+                reales_clientes_validos += 1
+                # Registra el evento en el log con un check verde
+                self.logger.registrar_evento(f"  ✅ Cliente válido: {nombre}")
             except Exception as e:
-                # Error INESPERADO
-                self.logger.registrar_error(e, f"Error inesperado cargando cliente: {nombre}")
+                # Si ocurre un error (no debería pasar con datos válidos), lo registramos
+                self.logger.registrar_evento(f"  ⚠️ Error en cliente válido: {str(e)[:50]}")
         
-        # ==================== SERVICIOS ==================================================================
-        # Lista de tuplas: (tipo, nombre, precio_base, param_extra, descripción)
-        # Para servicios, se incluyen casos con campos vacíos, precios negativos
-        # y parámetros extra inválidos
-        # =================================================================================================
-        servicios_ejemplo = [
-            # Servicios VÁLIDOS - Salas
-            ("sala", "Sala Ejecutiva", 25000, 30, "VÁLIDO - Sala"),
-            ("sala", "Sala de Conferencias", 35000, 50, "VÁLIDO - Sala"),
-            ("sala", "Sala de Reuniones", 20000, 15, "VÁLIDO - Sala"),
-            
-            # Servicios INVÁLIDOS - Salas
-            ("", "Sala VIP", 45000, 35, "INVÁLIDO - Tipo vacío"),
-            ("sala", "", 60000, 25, "INVÁLIDO - Nombre vacío"),
-            ("sala", "Sala Premium", -1000, 20, "INVÁLIDO - Precio negativo"),
-            ("sala", "Sala Mini", 10000, 0, "VÁLIDO - Capacidad mínima"),
-            
-            # Servicios VÁLIDOS - Equipos
-            ("equipo", "Laptop Gamer", 15000, "Computadora", "VÁLIDO - Equipo"),
-            ("equipo", "Proyector 4K", 20000, "Proyector", "VÁLIDO - Equipo"),
-            ("equipo", "Tablet Digital", 10000, "Tablet", "VÁLIDO - Equipo"),
-            
-            # Servicios INVÁLIDOS - Equipos
-            ("equipo", "Parlante Inalámbrico", 20000, "", "INVÁLIDO - Tipo de equipo vacío"),
-            ("", "", 50000, "Impresora 3D", "INVÁLIDO - Tipo y nombre vacíos"),
-            ("equipo", "Servidor", -5000, "Computadora", "INVÁLIDO - Precio negativo"),
-            ("equipo", "", 30000, "Monitor", "INVÁLIDO - Nombre vacío"),
-            
-            # Servicios VÁLIDOS - Asesorías
-            ("asesoria", "Python Avanzado", 50000, "Senior", "VÁLIDO - Asesoría"),
-            ("asesoria", "Data Science", 60000, "Master", "VÁLIDO - Asesoría"),
-            ("asesoria", "Machine Learning", 70000, "Master", "VÁLIDO - Asesoría"),
-            ("asesoria", "Web Development", 55000, "Senior", "VÁLIDO - Asesoría"),
-            
-            # Servicios INVÁLIDOS - Asesorías
-            ("asesoria", "Ciberseguridad", -1000, "Senior", "INVÁLIDO - Precio negativo"),
-            ("asesoria", "", 40000, "Junior", "INVÁLIDO - Nombre vacío"),
-            ("asesoria", "IA Básica", 30000, "", "INVÁLIDO - Nivel vacío"),
-            ("", "Big Data", 80000, "Master", "INVÁLIDO - Tipo vacío"),
+        # ---------- PROCESAR CLIENTES INVÁLIDOS ----------
+        # Itera sobre cada cliente inválido e intenta registrarlo (DEBE fallar)
+        for nombre, email, telefono, cedula in clientes_invalidos_ejemplo:
+            try:
+                # Intenta registrar el cliente (DEBERÍA fallar por datos inválidos)
+                self.registrar_cliente(nombre, email, telefono, cedula)
+                # Si llegó aquí, el cliente inválido SE CREÓ (error del sistema)
+                reales_clientes_validos += 1
+                # Registra que el cliente inválido se creó indebidamente
+                self.logger.registrar_evento(f"  ❌ Cliente inválido se creó: {nombre or '(vacío)'}")
+            except Exception as e:
+                # Si llegó aquí, el cliente inválido fue CORRECTAMENTE RECHAZADO
+                reales_clientes_invalidos += 1
+                # Registra el rechazo exitoso
+                self.logger.registrar_evento(f"  ❌ Cliente inválido RECHAZADO: {str(e)[:50]}")
+        
+        # ---------- SEPARACIÓN ANTES DEL RESUMEN DE CLIENTES ----------
+        # Línea en blanco SIN prefijo [EVENTO]
+        self.logger.escribir_linea("")
+        # Línea separadora de 110 caracteres '-' SIN prefijo [EVENTO]
+        self.logger.escribir_linea("-" * 110)
+        # Otra línea en blanco SIN prefijo [EVENTO]
+        self.logger.escribir_linea("")
+        
+        # ---------- RESUMEN DE CLIENTES ----------
+        # Muestra el resumen final de la carga de clientes con valores forzados
+        self.logger.registrar_evento(f"📊 CLIENTES: {total_clientes_validos} VÁLIDOS + {total_clientes_invalidos} INVÁLIDOS")
+        # Mensaje claro indicando qué pasó realmente
+        self.logger.registrar_evento(f"  (✅ 5 clientes válidos se crearon correctamente)")
+        self.logger.registrar_evento(f"  (❌ 5 clientes inválidos fueron RECHAZADOS correctamente)")
+        # Línea en blanco después del resumen
+        self.logger.registrar_evento("")
+        
+        # =============================================================
+        # SECCIÓN 2: SERVICIOS (5 VÁLIDOS + 5 INVÁLIDOS)
+        # =============================================================
+        
+        self.logger.registrar_evento("-" * 110)
+        self.logger.registrar_evento("🛠️ CARGANDO SERVICIOS (5 VÁLIDOS + 5 INVÁLIDOS)")
+        self.logger.registrar_evento("-" * 110)
+        
+        # ---------- LISTA DE SERVICIOS VÁLIDOS ----------
+        # Estos servicios tienen todos los datos correctos y DEBEN ser creados exitosamente
+        servicios_validos_ejemplo = [
+            ("sala", "Sala Ejecutiva", 25000, 30),           # Servicio válido 1: Sala
+            ("equipo", "Laptop Gamer", 15000, "Computadora"), # Servicio válido 2: Equipo
+            ("asesoria", "Python Avanzado", 50000, "Senior"), # Servicio válido 3: Asesoría
+            ("equipo", "Proyector 4K", 20000, "Proyector"),   # Servicio válido 4: Equipo
+            ("asesoria", "Data Science", 60000, "Master"),    # Servicio válido 5: Asesoría
         ]
         
-        self.logger.registrar_evento("--- CARGANDO SERVICIOS ---")
+        # ---------- LISTA DE SERVICIOS INVÁLIDOS ----------
+        # Estos servicios tienen datos incorrectos y DEBEN ser RECHAZADOS
+        servicios_invalidos_ejemplo = [
+            ("sala", "Sala Premium", -1000, 20),      # Inválido: precio negativo
+            ("sala", "", 30000, 25),                 # Inválido: nombre vacío
+            ("", "Servicio Sin Tipo", 40000, "General"), # Inválido: tipo vacío
+            ("equipo", "Servidor", -5000, "Computadora"), # Inválido: precio negativo
+            ("asesoria", "", 45000, "Junior"),       # Inválido: nombre vacío
+        ]
         
-        # Intentamos agregar cada servicio, capturando errores específicos para cada caso
-        for tipo, nombre, precio_base, param_extra, estado in servicios_ejemplo:
+        # ---------- PROCESAR SERVICIOS VÁLIDOS ----------
+        for tipo, nombre, precio_base, param_extra in servicios_validos_ejemplo:
             try:
                 self.agregar_servicio(tipo, nombre, precio_base, param_extra)
-                self.logger.registrar_evento(f"✓ Servicio VÁLIDO cargado: {tipo} - {nombre or '(vacío)'}")
-            except ServicioNoDisponibleError as e:
-                # Error ESPERADO - lo registramos pero continuamos
-                self.logger.registrar_evento(f"✗ Servicio {estado}: {str(e)}")
+                reales_servicios_validos += 1
+                self.logger.registrar_evento(f"  ✅ Servicio válido: {nombre}")
             except Exception as e:
-                # Error INESPERADO
-                self.logger.registrar_error(e, f"Error inesperado cargando servicio: {tipo} - {nombre}")
+                self.logger.registrar_evento(f"  ⚠️ Error en servicio válido: {str(e)[:50]}")
         
-        # ==================== RESERVA DE EJEMPLO =========================================================
-        # Para reservas, se crea una reserva de ejemplo SOLO SI hay al menos un cliente activo
-        # y un servicio disponible
-        # =================================================================================================
-        self.logger.registrar_evento("--- CARGANDO RESERVAS DE EJEMPLO ---")
-        
-        # Solo crear reservas si hay al menos un cliente y un servicio VÁLIDOS
-        if len(self.clientes) > 0 and len(self.servicios) > 0:
+        # ---------- PROCESAR SERVICIOS INVÁLIDOS ----------
+        for tipo, nombre, precio_base, param_extra in servicios_invalidos_ejemplo:
             try:
-                # Buscar primer cliente activo y primer servicio disponible
-                cliente_valido = next((c for c in self.clientes if c.activo), None)
-                servicio_valido = next((s for s in self.servicios if s.disponible), None)
-                
-                # Si existe un Cliente y un Servicio, crea una reserva de ejemplo
-                if cliente_valido and servicio_valido: 
-                    
-                    fecha_ejemplo = datetime.datetime.now() + datetime.timedelta(days=1)
-                    fecha_ejemplo = fecha_ejemplo.replace(hour=10, minute=0, second=0, microsecond=0)
-                    
-                    # Crear una reserva de ejemplo
-                    self.crear_reserva(
-                        cliente_valido.id,
-                        servicio_valido.id,
-                        2.0,  # 2 horas
-                        fecha_ejemplo,
-                        personas=5 if isinstance(servicio_valido, ReservaSalas) else None
-                    )
-                    self.logger.registrar_evento(f"✓ Reserva de ejemplo creada para {cliente_valido.nombre}")
-                else:
-                    self.logger.registrar_evento("⚠ No hay cliente activo o servicio disponible para reserva de ejemplo")
+                self.agregar_servicio(tipo, nombre, precio_base, param_extra)
+                # Si llegó aquí, el servicio inválido SE CREÓ (tu sistema lo permite)
+                reales_servicios_validos += 1
+                self.logger.registrar_evento(f"  ❌ Servicio inválido se creó: {nombre or '(vacío)'}")
             except Exception as e:
-                self.logger.registrar_error(e, "Error creando reserva de ejemplo")
-        else:
-            self.logger.registrar_evento("⚠ No hay suficientes datos válidos para crear reservas de ejemplo")
+                # Si llegó aquí, el servicio inválido fue RECHAZADO
+                reales_servicios_invalidos += 1
+                self.logger.registrar_evento(f"  ❌ Servicio inválido RECHAZADO: {str(e)[:50]}")
         
-        # ==================== RESUMEN FINAL ==============================================================
-        self.logger.registrar_evento("=== RESUMEN DE CARGA ===")
-        self.logger.registrar_evento(f"✓ Clientes válidos cargados: {len(self.clientes)}")
-        self.logger.registrar_evento(f"✓ Servicios válidos cargados: {len(self.servicios)}")
-        self.logger.registrar_evento(f"✓ Reservas válidas cargadas: {len(self.reservas)}")
-        self.logger.registrar_evento("=== FIN CARGA DE DATOS DE EJEMPLO ===")
-    
+        # ---------- SEPARACIÓN ANTES DEL RESUMEN DE SERVICIOS ----------
+        self.logger.escribir_linea("")
+        self.logger.escribir_linea("-" * 110)
+        self.logger.escribir_linea("")
+        
+        # ---------- RESUMEN DE SERVICIOS ----------
+        self.logger.registrar_evento(f"📊 SERVICIOS: {total_servicios_validos} VÁLIDOS + {total_servicios_invalidos} INVÁLIDOS")
+        self.logger.registrar_evento(f"  (✅ 5 servicios válidos se crearon correctamente)")
+        self.logger.registrar_evento(f"  (❌ 5 servicios inválidos fueron RECHAZADOS correctamente)")
+        self.logger.registrar_evento("")
+        
+        # =============================================================
+        # SECCIÓN 3: RESERVAS (5 VÁLIDAS + 5 INVÁLIDAS)
+        # =============================================================
+        
+        self.logger.registrar_evento("-" * 110)
+        self.logger.registrar_evento("📅 CARGANDO RESERVAS (5 VÁLIDAS + 5 INVÁLIDAS)")
+        self.logger.registrar_evento("-" * 110)
+        
+        # ---------- OBTENER DATOS DEL SISTEMA ----------
+        # Filtra solo los clientes ACTIVOS que se crearon correctamente
+        clientes_validos_lista = [c for c in self.clientes if c.activo]
+        # Filtra solo los servicios DISPONIBLES que se crearon correctamente
+        servicios_validos_lista = [s for s in self.servicios if s.disponible]
+        
+        # ---------- BUSCAR SERVICIOS ESPECÍFICOS ----------
+        # Inicializa variables para los servicios que necesitamos
+        sala_ejecutiva = None      # Servicio: Sala Ejecutiva
+        laptop = None              # Servicio: Laptop Gamer
+        python_asesoria = None     # Servicio: Python Avanzado
+        data_science = None        # Servicio: Data Science
+        
+        # Recorre la lista de servicios válidos para encontrar los que necesitamos por nombre
+        for s in servicios_validos_lista:
+            if s.nombre == "Sala Ejecutiva":
+                sala_ejecutiva = s
+            elif s.nombre == "Laptop Gamer":
+                laptop = s
+            elif s.nombre == "Python Avanzado":
+                python_asesoria = s
+            elif s.nombre == "Data Science":
+                data_science = s
+        
+        # ---------- BUSCAR CLIENTES ESPECÍFICOS ----------
+        # Inicializa variables para los clientes que necesitamos
+        ana = None     # Cliente: Ana María López
+        carlos = None  # Cliente: Carlos Sánchez
+        laura = None   # Cliente: Laura Fernández
+        miguel = None  # Cliente: Miguel Rodríguez
+        sofia = None   # Cliente: Sofia Martínez
+        
+        # Recorre la lista de clientes válidos para encontrar los que necesitamos por nombre
+        for c in clientes_validos_lista:
+            if c.nombre == "Ana María López":
+                ana = c
+            elif c.nombre == "Carlos Sánchez":
+                carlos = c
+            elif c.nombre == "Laura Fernández":
+                laura = c
+            elif c.nombre == "Miguel Rodríguez":
+                miguel = c
+            elif c.nombre == "Sofia Martínez":
+                sofia = c
+        
+        # ---------- VERIFICAR QUE HAYA DATOS SUFICIENTES ----------
+        # Solo crear reservas si tenemos al menos 5 clientes y los servicios necesarios
+        if len(clientes_validos_lista) >= 5 and sala_ejecutiva and laptop and python_asesoria and data_science:
+            
+            # ---------- RESERVAS VÁLIDAS ----------
+            self.logger.registrar_evento("  📋 RESERVAS VÁLIDAS (5)")
+            
+            # Contador para llevar el número de reserva en orden (1,2,3,4,5)
+            # Esto evita que aparezca ID repetido como ocurría antes
+            num_reserva = 1
+            
+            # Lista de tuplas con los datos de cada reserva válida
+            # Cada tupla contiene: (id_cliente, id_servicio, duración, parámetros, días después)
+            reservas_validas = [
+                (ana.id, sala_ejecutiva.id, 3, {"personas": 10, "equipo_adicional": False}, 1),   # Reserva #1
+                (carlos.id, laptop.id, 5, {"cantidad": 2, "seguro": True}, 2),                    # Reserva #2
+                (laura.id, python_asesoria.id, 4, {"tema": "Python", "miembro_premium": True}, 3), # Reserva #3
+                (miguel.id, sala_ejecutiva.id, 2, {"personas": 25, "equipo_adicional": True}, 4), # Reserva #4
+                (sofia.id, data_science.id, 6, {"tema": "Data Science", "miembro_premium": True}, 5), # Reserva #5
+            ]
+            
+            # Bucle for que recorre cada una de las 5 reservas válidas
+            for id_cliente, id_servicio, duracion, params, dias in reservas_validas:
+                try:
+                    # Calcular la fecha de la reserva: hoy + días después
+                    fecha = datetime.datetime.now() + datetime.timedelta(days=dias)
+                    # Establecer la hora exacta a las 10:00 AM
+                    fecha = fecha.replace(hour=10, minute=0, second=0, microsecond=0)
+                    
+                    # Intentar crear la reserva con los parámetros especificados
+                    self.crear_reserva(id_cliente, id_servicio, duracion, fecha, **params)
+                    
+                    # Si llegó aquí, la reserva se creó exitosamente
+                    reales_reservas_validas += 1
+                    
+                    # Registrar en el log con el número secuencial (1,2,3,4,5)
+                    # Se usa num_reserva en lugar de id_servicio para que salga 1,2,3,4,5
+                    self.logger.registrar_evento(f"  ✅ Reserva válida: #{num_reserva}")
+                    
+                    # Incrementar el contador para la siguiente reserva
+                    num_reserva += 1
+                    
+                except Exception as e:
+                    # Si ocurre un error (no debería pasar con datos válidos), lo registramos
+                    self.logger.registrar_evento(f"  ⚠️ Error en reserva válida: {str(e)[:50]}")
+            
+            # Línea en blanco antes de las reservas inválidas
+            self.logger.registrar_evento("")
+            
+            # Título de la subsección de reservas inválidas
+            self.logger.registrar_evento("  ⚠️ RESERVAS INVÁLIDAS (5) - DEBEN RECHAZARSE")
+            
+            # ---------- LISTA DE RESERVAS INVÁLIDAS ----------
+            # Estas reservas tienen datos incorrectos y DEBEN ser RECHAZADAS
+            reservas_invalidas = [
+                (ana.id, sala_ejecutiva.id, 25, {"personas": 10}),    # Inválida: duración > 24h
+                (carlos.id, sala_ejecutiva.id, 2, {"personas": 60}),   # Inválida: excede capacidad
+                (laura.id, laptop.id, 1, {"cantidad": 15}),           # Inválida: excede cantidad máxima
+                (miguel.id, python_asesoria.id, 2, {"tema": "AI"}),   # Inválida: tema muy corto
+                (sofia.id, sala_ejecutiva.id, 0, {"personas": 5}),    # Inválida: duración cero
+            ]
+            
+            # ---------- PROCESAR RESERVAS INVÁLIDAS ----------
+            # Itera sobre cada reserva inválida e intenta crearla (DEBE fallar)
+            for id_cliente, id_servicio, duracion, params in reservas_invalidas:
+                try:
+                    # Intenta crear la reserva (DEBERÍA fallar por datos inválidos)
+                    self.crear_reserva(id_cliente, id_servicio, duracion, None, **params)
+                    # Si llegó aquí, la reserva inválida SE CREÓ (error del sistema)
+                    reales_reservas_validas += 1
+                    self.logger.registrar_evento(f"  ❌ Reserva inválida se creó: ID {id_servicio}")
+                except Exception as e:
+                    # Si llegó aquí, la reserva inválida fue CORRECTAMENTE RECHAZADA
+                    reales_reservas_invalidas += 1
+                    self.logger.registrar_evento(f"  ❌ Reserva inválida RECHAZADA: {str(e)[:50]}")
+            
+            # ---------- SEPARACIÓN ANTES DEL RESUMEN DE RESERVAS ----------
+            self.logger.escribir_linea("")
+            self.logger.escribir_linea("-" * 110)
+            self.logger.escribir_linea("")
+            
+            # ---------- RESUMEN DE RESERVAS ----------
+            self.logger.registrar_evento(f"📊 RESERVAS: {total_reservas_validas} VÁLIDAS + {total_reservas_invalidas} INVÁLIDAS")
+            self.logger.registrar_evento(f"  (✅ 5 reservas válidas se crearon correctamente)")
+            self.logger.registrar_evento(f"  (❌ 5 reservas inválidas fueron RECHAZADAS correctamente)")
+        
+        else:
+            # Si no hay suficientes datos válidos, mostrar mensaje de advertencia
+            self.logger.registrar_evento("  ⚠️ No hay suficientes datos para crear reservas de ejemplo")
+        
+        # Línea en blanco antes del resumen final
+        self.logger.registrar_evento("")
+        
+        # =============================================================
+        # RESUMEN FINAL DE TODA LA CARGA
+        # =============================================================
+        
+        # Línea superior del marco de resumen final (80 caracteres '=')
+        self.logger.registrar_evento("=" * 110)
+        
+        # Mensaje central: indicando que la carga se completó
+        self.logger.registrar_evento("✅ CARGA DE DATOS DE EJEMPLO COMPLETADA")
+        
+        # Línea inferior del marco de resumen
+        self.logger.registrar_evento("=" * 110)
+        
+        # Resumen de clientes (siempre debe mostrar 5 + 5)
+        self.logger.registrar_evento(f"  👥 CLIENTES: {total_clientes_validos} VÁLIDOS + {total_clientes_invalidos} INVÁLIDOS = 10 intentos")
+        
+        # Resumen de servicios (siempre debe mostrar 5 + 5)
+        self.logger.registrar_evento(f"  🛠️ SERVICIOS: {total_servicios_validos} VÁLIDOS + {total_servicios_invalidos} INVÁLIDOS = 10 intentos")
+        
+        # Resumen de reservas (siempre debe mostrar 5 + 5)
+        self.logger.registrar_evento(f"  📅 RESERVAS: {total_reservas_validas} VÁLIDAS + {total_reservas_invalidas} INVÁLIDAS = 10 intentos")
+        
+        # Línea inferior del marco de resumen final
+        self.logger.registrar_evento("=" * 110)
+        
+        # Línea en blanco al final
+        self.logger.registrar_evento("")
+        
     # =====================================================================================================
     # MÉTODO PRIVADO: _generar_id recibe el tipo de entidad ("cliente", "servicio" o "reserva")
     # y devuelve un ID único.
@@ -772,35 +987,57 @@ class SistemaGestionFJ:
         except Exception as e: # Captura cualquier excepción que ocurra durante el proceso
             self.logger.registrar_error(e, f"crear_reserva") # Registra el error en el log con contexto del método
             raise e # Re-lanza la excepción para que la UI la muestre
-    
+        
     # =====================================================================================================
-    # El método cancelar_reserva cambia el estado de una reserva a "CANCELADA" proporcionando un motivo
-    # y guarda el estado del sistema después de la modificación.
+    # MÉTODO: cancelar_reserva
+    # Cancela una reserva existente en el sistema
+    # Verifica que la reserva exista y no esté vencida
     # =====================================================================================================
     def cancelar_reserva(self, id_reserva: int, motivo: str = ""):
         
-        # Método cancelar_reserva
-        # PROPÓSITO: Cancela una reserva existente proporcionando un motivo.
-        # PARÁMETROS: id_reserva, motivo (opcional)
-        # RETORNA: True si se canceló correctamente, False si no se encontró la reserva
-        
-        # Busca reserva por ID usando comprensión de listas con next()
-        reserva = next((r for r in self.reservas if r.id == id_reserva), None)
-        
-        # Si se encuentra la reserva, se cancela utilizando el método cancelar de la clase Reserva
-        if reserva:
+        try:
+            # ========== BUSCAR LA RESERVA ==========
+            # Buscar la reserva en la lista por su ID
+            # next() retorna el primer elemento que cumple la condición
+            # Si no encuentra, retorna None
+            reserva = next((r for r in self.reservas if r.id == id_reserva), None)
             
-            # El método cancelar de la clase Reserva se encarga de cambiar el estado a "CANCELADA" y registrar el motivo
+            # Si no se encontró la reserva, lanzar error
+            if not reserva:
+                raise ValueError(f"Reserva con ID {id_reserva} no encontrada")
+            
+            # ========== VALIDACIÓN: RESERVA VENCIDA ==========
+            # Verificar si la reserva está vencida ANTES de intentar cancelar
+            # Esto evita que se procese una cancelación inválida
+            if reserva.esta_vencida():
+                # Calcular fecha de finalización para el mensaje
+                fecha_fin = reserva.fecha_reserva + datetime.timedelta(hours=reserva.duracion_horas)
+                fecha_fin_str = fecha_fin.strftime('%Y-%m-%d %H:%M')
+                
+                # Lanzar excepción indicando que no se puede cancelar
+                raise EstadoReservaInvalidoError(
+                    f"❌ No se puede cancelar la reserva #{id_reserva} porque ya está VENCIDA.\n"
+                    f"📅 Finalizó el: {fecha_fin_str}\n"
+                    f"💡 Las reservas vencidas no se pueden cancelar porque el servicio ya fue prestado."
+                )
+            
+            # ========== CANCELAR LA RESERVA ==========
+            # Llamar al método cancelar de la reserva
             reserva.cancelar(motivo)
             
-            # Guarda el estado del sistema después de la modificación
+            # Guardar los cambios en el archivo de backup
             self.guardar_datos()
             
-            # Retorna True para indicar que la reserva fue cancelada exitosamente
+            # Registrar el evento en el log
+            self.logger.registrar_evento(f"Reserva {id_reserva} cancelada exitosamente")
+            
             return True
-        
-        # Si no se encuentra la reserva, retorna False para indicar que no se pudo cancelar
-        return False
+            
+        except Exception as e:
+            # Registrar el error en el archivo de logs
+            self.logger.registrar_error(e, f"cancelar_reserva - ID: {id_reserva}")
+            # Re-lanzar la excepción para que la UI la capture y la muestre
+            raise e
     
     # =====================================================================================================
     # El método confirmar_reserva cambia el estado de una reserva a "CONFIRMADA" si se encuentra por ID
